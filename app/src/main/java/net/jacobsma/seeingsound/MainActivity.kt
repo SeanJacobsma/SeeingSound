@@ -7,11 +7,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -26,9 +28,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -36,11 +38,12 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import net.jacobsma.seeingsound.latex.EquationView
+import net.jacobsma.seeingsound.acoustics.animate.animateSineAsState
+import net.jacobsma.seeingsound.screens.Explore
 import net.jacobsma.seeingsound.ui.theme.AcousticDemoComposeTheme
-import net.jacobsma.seeingsound.latex.LatexView
-import java.io.IOException
-import java.io.InputStream
+import net.jacobsma.seeingsound.screens.Learn
+import net.jacobsma.seeingsound.screens.Playground
+import net.jacobsma.seeingsound.screens.Home
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,6 +64,7 @@ fun UI() {
     var selectedItem by remember { mutableIntStateOf(0) }
     val items = listOf("Home", "Learn", "Explore", "Playground")
     val icons = listOf(R.drawable.baseline_home_24, R.drawable.baseline_school_24, R.drawable.baseline_architecture_24, R.drawable.baseline_attractions_24)
+    var startTheAnimation by remember { mutableStateOf(0f) }
 
     Column(
         modifier = Modifier.background(color = MaterialTheme.colorScheme.background),
@@ -72,16 +76,21 @@ fun UI() {
                 .align(Alignment.CenterHorizontally)
         ) {
             composable(items[0]) {
-                HomeScreen()
+                Home()
+                startTheAnimation = 0f
             }
             composable(items[1]) {
-                LearnScreen()
+                Learn()
+                startTheAnimation = 20f
             }
             composable(items[2]) {
-                ExploreScreen()
+                Explore()
+                startTheAnimation = 30f
+
             }
             composable(items[3]) {
-                PlaygroundScreen()
+                Playground(start = startTheAnimation)
+                startTheAnimation = 1f
             }
         }
         NavigationBar(
@@ -121,77 +130,46 @@ fun UI() {
 }
 
 @Composable
-fun HomeScreen() {
-    Text(
-        text = "Home",
-        color = MaterialTheme.colorScheme.onBackground)
-    EquationView(latex = "\\begin{array}{cc}a & b\\c & d\\end{array}", color = MaterialTheme.colorScheme.onBackground)
-}
+fun Test(
+    start: Float = 0f,
+    dur: Int = 1000
+) {
+    val boxHeight by animateSineAsState(
+        durationMillis = dur,
+        numCycles = 5,
+        offset = start.toDouble(),
+        amplitude = 75.0,
+        phase = 90.0,
+        repeat = true
+    )
 
-@Composable
-fun LearnScreen() {
-//    LaTeXView(latex = "\\\\sin(x) \\\\cdot \\\\cos(y) \\\\cdot \\\\sin(x \\\\cdot y)", color = MaterialTheme.colorScheme.onBackground)
-//    LaTeXView(latex = "\\Delta U=-\\int_{a}^{b} \\vec{F} \\cdot \\vec{ds}", color = MaterialTheme.colorScheme.onBackground)
-//    EquationView(latex = "\\Delta U=-\\int_{a}^{b} \\vec{F} \\cdot \\vec{ds} \\qquad \\qquad \\qquad" +
-//            "  \\vec{F} = -\\vec{\\nabla}U = - \\frac{\\delta U}{\\delta x}\\hat{x} - \\frac{\\delta U}{\\delta y}\\hat{y} - \\frac{\\delta U}{\\delta z}\\hat{z} ", color = MaterialTheme.colorScheme.onBackground)
-//    LaTeXView(latex = "\\\\section*{Notes for My Paper}\\cr", color = MaterialTheme.colorScheme.onBackground)
-
-//        var dataText by remember {
-//        mutableStateOf("asd")
-//    }
-
-    val context = LocalContext.current
-
-
-//    LaunchedEffect(true) {
-//        kotlin.runCatching {
-//            val size: Int = inputStream.available()
-//            val buffer = ByteArray(size)
-//            inputStream.read(buffer)
-//            String(buffer)
-//        }.onSuccess {
-//            dataText = it
-//        }.onFailure {
-//            dataText = "error"
-//        }
-//
-//    }
-    var inputStream: InputStream? = null
-    var fileFound by remember {
-        mutableStateOf(false)
-    }
-    try {
-        inputStream = context.assets.open("test.tex")
-        fileFound = true
-    } catch (e : IOException) {
-        fileFound = false
-    }
-
-    Column( modifier = Modifier
-        .verticalScroll(rememberScrollState())) {
-        if (fileFound) {
-            LatexView(inputStream = inputStream, textColor = MaterialTheme.colorScheme.onBackground)
-        } else {
-            Text(text = "Error 404: File Not Found", color = MaterialTheme.colorScheme.onBackground)
+    Box(modifier = Modifier
+        .fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Column(
+            modifier = Modifier,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .background(color = Color.Green)
+                    .width(50.dp)
+                    .height(boxHeight.dp)
+            )
+            Box(
+                modifier = Modifier
+                    .background(color = Color.Blue)
+                    .size(100.dp)
+            )
         }
+
+        Box(modifier = Modifier
+            .width(150.dp)
+            .height(2.dp)
+            .offset(y = (start.dp + 50.dp))
+            .background(color = Color.Red))
     }
-//    Text(
-//        text = "Learn",
-//        color = MaterialTheme.colorScheme.onBackground)
-}
-
-@Composable
-fun ExploreScreen() {
-//    Text(
-//        text = "Explore",
-//        color = MaterialTheme.colorScheme.onBackground)
-}
-
-@Composable
-fun PlaygroundScreen() {
-    Text(
-        text = "Playground",
-        color = MaterialTheme.colorScheme.onBackground)
 }
 
 @Composable
