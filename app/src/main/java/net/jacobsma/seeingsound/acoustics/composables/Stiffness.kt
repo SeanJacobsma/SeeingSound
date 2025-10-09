@@ -3,6 +3,7 @@ package net.jacobsma.seeingsound.acoustics.composables
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -11,11 +12,18 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun Stiffness(height: Dp) {
+fun Stiffness(leftMassStart: Dp, leftMassAmp: Dp, rightMassStart:Dp, rightMassAmp:Dp) {
     Box(
         modifier = Modifier
-            .background(color = Color.Green)
             .width(25.dp)
-            .height(height)
+            .offset(0.dp, leftMassStart + leftMassAmp)
+            .height((rightMassStart + rightMassAmp) - (leftMassStart + leftMassAmp))
+            .background(color = Color.Green) // This must come after setting offset, otherwise offset is not applied
+
     )
+}
+
+@Composable
+fun Stiffness(height: Dp) {
+    Box(modifier = Modifier)
 }
