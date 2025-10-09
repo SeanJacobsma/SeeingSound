@@ -25,27 +25,61 @@ import net.jacobsma.seeingsound.acoustics.animate.animateTimeAsState
 import net.jacobsma.seeingsound.acoustics.composables.Damper
 import net.jacobsma.seeingsound.acoustics.composables.Mass
 import net.jacobsma.seeingsound.acoustics.composables.Stiffness
+import net.jacobsma.seeingsound.acoustics.damping.EffectiveDamping
+import net.jacobsma.seeingsound.acoustics.mass.EffectiveMass
+import net.jacobsma.seeingsound.acoustics.rref
 import net.jacobsma.seeingsound.acoustics.squared
+import net.jacobsma.seeingsound.acoustics.stiffness.EffectiveStiffness
 import net.jacobsma.seeingsound.acoustics.toAngularFrequency
+import net.jacobsma.seeingsound.acoustics.toFrequency
+import org.jetbrains.kotlinx.multik.api.linalg.eigVals
+import org.jetbrains.kotlinx.multik.api.mk
+import org.jetbrains.kotlinx.multik.api.zeros
+import org.jetbrains.kotlinx.multik.ndarray.data.D2
+import org.jetbrains.kotlinx.multik.ndarray.data.NDArray
+import org.jetbrains.kotlinx.multik.ndarray.data.get
+import org.jetbrains.kotlinx.multik.ndarray.data.set
+import org.jetbrains.kotlinx.multik.ndarray.operations.times
+import org.jetbrains.kotlinx.multik.ndarray.operations.toList
 import kotlin.math.exp
 import kotlin.math.sin
 import kotlin.math.sqrt
 
 class Oscillator(
-    initialMass: Double = 1.0,
-    initialStiffness: Double = 1.0,
-    initialDamping: Double = 1.0,
+    initialMasses: ArrayList<EffectiveMass> = arrayListOf<EffectiveMass>(EffectiveMass(1.0)),
+    initialStiffness: ArrayList<EffectiveStiffness> = arrayListOf<EffectiveStiffness>(EffectiveStiffness(1.0)),
+    initialDamping: ArrayList<EffectiveDamping> = arrayListOf<EffectiveDamping>(EffectiveDamping(1.0)),
     val initialDisplacement: Double = 50.0,
     phaseOffset: Double = 0.0,
 ) : ViewModel() {
-    private val _mass: MutableLiveData<Double> = MutableLiveData(initialMass)
-    val mass: LiveData<Double> = _mass
 
-    private val _stiffness: MutableLiveData<Double> = MutableLiveData(initialStiffness)
-    val stiffness: LiveData<Double> = _stiffness
+    val masses: ArrayList<EffectiveMass> = initialMasses
 
-    private val _damping: MutableLiveData<Double> = MutableLiveData(initialDamping)
-    val damping: LiveData<Double> = _damping
+    val stiffnesses: ArrayList<EffectiveStiffness> = initialStiffness
+
+    val le: ArrayList<LumpedElement> = ArrayList(List(masses.size) {LumpedElement(null, EffectiveMass(0), null)})
+    init {
+        for (n in 0 until le.size) {
+            when (n) {
+                le.size - 1 -> {
+                    if (stiffnesses.size == masses.size + 1 ) {
+                        le[n] = LumpedElement(stiffnesses[n], masses[n], stiffnesses[n + 1])
+                    } else {
+                        le[n] = LumpedElement(stiffnesses[n], masses[n], null)
+                    }
+                }
+                else -> le[n] = LumpedElement(stiffnesses[n], masses[n], stiffnesses[n + 1])
+            }
+        }
+        Log.d("TAG", ": $le")
+    }
+    val dampers: ArrayList<EffectiveDamping> = initialDamping
+
+    val modalFrequencies: ArrayList<LiveValueHolder> = ArrayList(List(masses.size) {LiveValueHolder(0.0)})
+    val amplitudes: ArrayList<LiveValueHolder> = ArrayList(List(masses.size) { LiveValueHolder(0.0)})
+
+    private val _frequencyIndex: MutableLiveData<Int> = MutableLiveData(1)
+    val selectedFrequencyIndex: LiveData<Int> = _frequencyIndex
 
     private val _frequency: MutableLiveData<Double> = MutableLiveData(calcNaturalFreq())
     val frequency: LiveData<Double> = _frequency
@@ -56,40 +90,89 @@ class Oscillator(
     private val _phase: MutableLiveData<Double> = MutableLiveData(phaseOffset)
     val phase: LiveData<Double> = _phase
 
-    fun onMassChange(newMass: Double?){
-        _mass.value = newMass ?: 0.0
+    fun onMassChange(newMass: Double?, index: Int){
+        masses[index].setMass(newMass ?: 0.0)
         _frequency.value = calcNaturalFreq()
     }
 
-    fun onStiffnessChange(newStiffness: Double?){
-        _stiffness.value = newStiffness ?: 0.0
+    fun onStiffnessChange(newStiffness: Double?, index: Int) {
+        stiffnesses[index].setStiffness(newStiffness ?: 0.0)
         _frequency.value = calcNaturalFreq()
-
     }
 
-    fun onDampingChange(newDamping: Double?){
-        _damping.value = newDamping ?: 0.0
+    fun onDampingChange(newDamping: Double?, index: Int){
+        dampers[index].setDamping(newDamping ?: 0.0)
         _frequency.value = calcNaturalFreq()
+    }
+
+    private fun getMotionEquationMatrix() : NDArray<Double, D2> {
+        val N = masses.size
+        val matrix: NDArray<Double, D2> = mk.zeros(N, N)
+        for (i in 0 until le.size) {
+            matrix[i] = le[i].getGeneralMotionEquation(i, N)
+        }
+        Log.d("TAG", "getMotionEquationMatrix: $matrix")
+        return matrix
     }
 
     private fun calcNaturalFreq() : Double {
-        return if (mass.value == null || stiffness.value == null)
-            0.0
-        else
-            sqrt((stiffness.value!! / mass.value!!) - squared(calcDampingRatio()))
+        val matrix = getMotionEquationMatrix()
+        val eigenValues = mk.linalg.eigVals(matrix).toList().reversed()
+        if (modalFrequencies.size != eigenValues.size) {
+            throw RuntimeException("Incorrect number of modal frequencies calculated.")
+        }
+        for (i in 0 until eigenValues.size){
+            modalFrequencies[i].setValue(toFrequency(sqrt(eigenValues[i].re)))
+            Log.d("TAG", "calcNaturalFreq: f_i: ${modalFrequencies[i].toDouble()}")
+        }
+
+        Log.d("TAG", "calculated eigenvalues as: ${eigenValues[0]}")
+        calcAmplitude()
+        return modalFrequencies[_frequencyIndex.value!!].toDouble()
+//        return if (masses[0].toDouble() == 0.0)
+//            0.0
+//        else
+//            sqrt((stiffnesses[0].toDouble() / masses[0].toDouble()) - squared(calcDampingRatio()))
+    }
+
+    private fun calcAmplitude() : Double {
+        val N = masses.size
+        var matrix = getMotionEquationMatrix()
+        for (n in 0 until N) {
+            val omegaSquared = squared(toAngularFrequency( modalFrequencies[_frequencyIndex.value!!].toDouble()))
+            Log.d("TAG", "calcAmplitude w^2: $omegaSquared")
+            matrix[n,n] -= omegaSquared
+        }
+        Log.d("TAG", "calcAmplitude: matrix with freq $matrix")
+
+        val B = matrix[0 until N, 0].deepCopy() * -1.0
+        Log.d("TAG", "calcAmplitude: B: ${B[0]}")
+        for (i in 0 until N) {
+            matrix[i,0] = 0.0
+        }
+        Log.d("TAG", "calcAmplitude: matrix:$matrix")
+        val C = addColumn(matrix, B)
+        var D: NDArray<Double, D2> = mk.zeros(1,N+1)
+        Log.d("TAG", "calcAmplitude: $D")
+        D[0,0] = 1.0
+        D[0,N] = 1.0
+
+        val a = rref(C.cat(D))
+        Log.d("TAG", "calcAmplitude: $a")
+        return 0.0
     }
 
     private fun calcDampingRatio(): Double {
-        return if (mass.value == null || damping.value == null)
+        return if (masses[0].toDouble() == 0.0)
             0.0
         else
-            damping.value!! / (2.0 * mass.value!!)
+            dampers[0].toDouble() / (2.0 * masses[0].toDouble())
     }
 
     fun updateDisplacement(timeSeconds: Float) : Double {
         val amplitude: Double = initialDisplacement * exp(-1*calcDampingRatio()*timeSeconds)
         _displacement.value = amplitude * sin(toAngularFrequency(_frequency.value!!) * timeSeconds +_phase.value!!)
-        Log.d("TAG", "$timeSeconds updateDisplacement: disp: ${_displacement.value}, init disp: $initialDisplacement, freq: ${_frequency.value}")
+//        Log.d("TAG", "$timeSeconds updateDisplacement: disp: ${_displacement.value}, init disp: $initialDisplacement, freq: ${_frequency.value}")
         return _displacement.value!!
     }
 
@@ -101,19 +184,9 @@ fun SingleDOF(
     dur: Int = 1000,
     oscillator: Oscillator = Oscillator()
 ) {
-    val mass: Double by oscillator.mass.observeAsState(0.0)
-    val stiffness: Double by oscillator.stiffness.observeAsState(0.0)
-    val damping: Double by oscillator.damping.observeAsState(0.0)
-
-
-//    val boxHeight by animateSineAsState(
-//        durationMillis = dur,
-//        numCycles = 5,
-//        offset = start.toDouble(),
-//        amplitude = if(stiffness != 0.0) 150.0 / stiffness else 150.0,
-//        phase = 0.0,
-//        repeat = true
-//    )
+    val mass: Number by oscillator.masses[0].value.observeAsState(0.0)
+    val stiffness: Number by oscillator.stiffnesses[0].value.observeAsState(0.0)
+    val damping: Number by oscillator.dampers[0].value.observeAsState(0.0)
 
     val time:Float by animateTimeAsState(
         totalTimeMilliseconds = 10000f
@@ -156,18 +229,18 @@ fun SingleDOF(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 NumberPicker(
-                    value = mass,
-                    onValueChange = { oscillator.onMassChange(it) },
+                    value = mass.toDouble(),
+                    onValueChange = { oscillator.onMassChange(it, 0) },
                     label = "Mass"
                 )
                 NumberPicker(
-                    value = stiffness,
-                    onValueChange = { oscillator.onStiffnessChange(it) },
+                    value = stiffness.toDouble(),
+                    onValueChange = { oscillator.onStiffnessChange(it, 0) },
                     label = "Stiffness"
                 )
                 NumberPicker(
-                    value = damping,
-                    onValueChange = { oscillator.onDampingChange(it) },
+                    value = damping.toDouble(),
+                    onValueChange = { oscillator.onDampingChange(it, 0) },
                     label = "Damping"
                 )
             }
