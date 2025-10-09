@@ -70,6 +70,8 @@ dependencies {
     debugImplementation 'androidx.compose.ui:ui-tooling'
     debugImplementation 'androidx.compose.ui:ui-test-manifest:1.9.1'
     implementation("com.google.accompanist:accompanist-webview:0.36.0")
+    implementation "org.jetbrains.kotlinx:multik-core:0.2.3"
+    implementation "org.jetbrains.kotlinx:multik-kotlin:0.2.3"
 
 //    implementation("eu.sirotin.kotunil:kotunil-jvm:4.2.2") -- add back in when I add unit checks.
 
