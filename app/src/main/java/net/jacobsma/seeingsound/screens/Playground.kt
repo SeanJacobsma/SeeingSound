@@ -10,7 +10,6 @@ import net.jacobsma.seeingsound.acoustics.mass.EffectiveMass
 import net.jacobsma.seeingsound.acoustics.stiffness.EffectiveStiffness
 import net.jacobsma.seeingsound.acoustics.systems.MassSpring2DOF
 import net.jacobsma.seeingsound.acoustics.systems.Oscillator
-import net.jacobsma.seeingsound.acoustics.systems.SingleDOF
 
 @Composable
 fun Playground(

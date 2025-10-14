@@ -22,11 +22,11 @@ fun <T : Number> rref(matrix: D2Array<T>): D2Array<T> {
         // Find pivot
         var maxRow = pivotRow
         for (i in pivotRow + 1 until nRows) {
-            if (kotlin.math.abs(result[i, j].toDouble()) > kotlin.math.abs(result[maxRow, j].toDouble())) {
+            if (abs(result[i, j].toDouble()) > abs(result[maxRow, j].toDouble())) {
                 maxRow = i
             }
         }
-        Log.d("TAG", "rref initial pivot:[$pivotRow,$j], Matrix:$result")
+//        Log.d("TAG", "rref initial pivot:[$pivotRow,$j], Matrix:$result")
 
         if (result[maxRow, j].toDouble() == 0.0) continue
 
@@ -35,7 +35,7 @@ fun <T : Number> rref(matrix: D2Array<T>): D2Array<T> {
             val tempRow = result[maxRow].copy()
             result[maxRow] = result[pivotRow]
             result[pivotRow] = tempRow
-            Log.d("TAG", "rref swap pivot:[$pivotRow,$j], Matrix:$result")
+//            Log.d("TAG", "rref swap pivot:[$pivotRow,$j], Matrix:$result")
         }
 
         // Scale pivot row
@@ -47,7 +47,7 @@ fun <T : Number> rref(matrix: D2Array<T>): D2Array<T> {
         } else {
             result[pivotRow, j] = 0.0 as T // Clear floating point error
         }
-        Log.d("TAG", "rref scaled pivot:[$pivotRow,$j], Matrix:$result")
+//        Log.d("TAG", "rref scaled pivot:[$pivotRow,$j], Matrix:$result")
 
         // Eliminate other rows
         for (i in 0 until nRows) {
@@ -58,7 +58,7 @@ fun <T : Number> rref(matrix: D2Array<T>): D2Array<T> {
                 }
             }
         }
-        Log.d("TAG", "rref reduced pivot:[$pivotRow,$j], Matrix:$result")
+//        Log.d("TAG", "rref reduced pivot:[$pivotRow,$j], Matrix:$result")
         pivotRow++
         if (pivotRow == nRows) break
     }
@@ -70,7 +70,7 @@ fun addColumn(originalArray:NDArray<Double, D2>, newColumnData: MultiArray<Doubl
     val numCols = originalArray.shape[1]
     val newNumCols = numCols + 1
 
-    Log.d("TAG", "addColumn: $newColumnData")
+//    Log.d("TAG", "addColumn: $newColumnData")
 
     // Create a new MultiArray with the increased column dimension
     val newArray = mk.zeros<Double>(numRows, newNumCols)

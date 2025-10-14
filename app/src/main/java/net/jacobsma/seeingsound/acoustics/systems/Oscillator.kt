@@ -204,27 +204,27 @@ class Oscillator(
 
     private fun calcAmplitude(){
         val N = masses.size
-        Log.d("TAG", "calcAmplitude: matrix with freq $matrix")
         val omega = toAngularFrequency( modalFrequencies[_frequencyIndex.value!!].toDouble())
         var matrix = getMotionEquationMatrix(omega)
+//        Log.d("TAG", "calcAmplitude: matrix with freq $matrix")
 
         val B = matrix[0 until N, 0].deepCopy() * -1.0
-        Log.d("TAG", "calcAmplitude: B: ${B[0]}")
+//        Log.d("TAG", "calcAmplitude: B: $B")
         for (i in 0 until N) {
             matrix[i,0] = 0.0
         }
-        Log.d("TAG", "calcAmplitude: matrix:$matrix")
+//        Log.d("TAG", "calcAmplitude: matrix:$matrix")
         val C = addColumn(matrix, B)
         var D: NDArray<Double, D2> = mk.zeros(1,N+1)
-        Log.d("TAG", "calcAmplitude: $D")
+//        Log.d("TAG", "calcAmplitude: $D")
         D[0,0] = 1.0
         D[0,N] = 1.0
 
         val a = rref(C.cat(D))
-        Log.d("TAG", "calcAmplitude: $a")
         for (i in 0 until N) {
             amplitudes[i].setValue(a[i, N])
         }
+//        Log.d("TAG", "calcAmplitude: $a")
     }
 
     private fun calcDampingRatio(index: Int): Double {
