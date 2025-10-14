@@ -52,7 +52,7 @@ class Oscillator(
     initialMasses: ArrayList<EffectiveMass> = arrayListOf<EffectiveMass>(EffectiveMass(1.0)),
     initialStiffness: ArrayList<EffectiveStiffness> = arrayListOf<EffectiveStiffness>(EffectiveStiffness(1.0)),
     initialDamping: ArrayList<EffectiveDamping> = arrayListOf<EffectiveDamping>(EffectiveDamping(1.0)),
-    val initialDisplacement: Double = 50.0,
+    val maxAmplitude: Double = 50.0,
     phaseOffset: Double = 0.0,
 ) : ViewModel() {
 
@@ -60,18 +60,18 @@ class Oscillator(
 
     val stiffnesses: ArrayList<EffectiveStiffness> = initialStiffness
 
-    val le: ArrayList<LumpedElement> = ArrayList(List(masses.size) {LumpedElement(null, EffectiveMass(0), null)})
+    val le: ArrayList<LumpedElement> = ArrayList(List(masses.size) {LumpedElement(leftStiffness = null, mass = EffectiveMass(0),  rightStiffness = null)})
     init {
         for (n in 0 until le.size) {
             when (n) {
                 le.size - 1 -> {
                     if (stiffnesses.size == masses.size + 1 ) {
-                        le[n] = LumpedElement(stiffnesses[n], masses[n], stiffnesses[n + 1])
+                        le[n] = LumpedElement(leftStiffness = stiffnesses[n], mass = masses[n], rightStiffness = stiffnesses[n + 1])
                     } else {
-                        le[n] = LumpedElement(stiffnesses[n], masses[n], null)
+                        le[n] = LumpedElement(leftStiffness = stiffnesses[n], mass = masses[n], rightStiffness = null)
                     }
                 }
-                else -> le[n] = LumpedElement(stiffnesses[n], masses[n], stiffnesses[n + 1])
+                else -> le[n] = LumpedElement(leftStiffness = stiffnesses[n], mass = masses[n], rightStiffness = stiffnesses[n + 1])
             }
         }
         Log.d("TAG", ": $le")
@@ -87,8 +87,8 @@ class Oscillator(
     private val _frequency: MutableLiveData<Double> = MutableLiveData(calcNaturalFreq())
     val frequency: LiveData<Double> = _frequency
 
-    private val _displacement: MutableLiveData<Double> = MutableLiveData(initialDisplacement)
-    val displacement: LiveData<Double> = _displacement
+    private val _displacement: MutableLiveData<Double> = MutableLiveData(maxAmplitude)
+    val displacements: ArrayList<LiveValueHolder> = ArrayList(List(masses.size) {LiveValueHolder(0.0)})
 
     private val _phase: MutableLiveData<Double> = MutableLiveData(phaseOffset)
     val phase: LiveData<Double> = _phase
@@ -173,10 +173,12 @@ class Oscillator(
     }
 
     fun updateDisplacement(timeSeconds: Float) : Double {
-        val amplitude: Double = initialDisplacement * exp(-1*calcDampingRatio()*timeSeconds)
-        _displacement.value = amplitude * sin(toAngularFrequency(_frequency.value!!) * timeSeconds +_phase.value!!)
+        for(i in 0 until displacements.size) {
+            val amplitude: Double = maxAmplitude * amplitudes[i].toDouble() * exp(-1*calcDampingRatio(i)*timeSeconds)
+            displacements[i].setValue(amplitude * sin(toAngularFrequency(_frequency.value!!) * timeSeconds +_phase.value!!))
 //        Log.d("TAG", "$timeSeconds updateDisplacement: disp: ${_displacement.value}, init disp: $initialDisplacement, freq: ${_frequency.value}")
-        return _displacement.value!!
+        }
+        return displacements[0].toDouble()
     }
 
 }
@@ -194,6 +196,7 @@ fun SingleDOF(
     val time:Float by animateTimeAsState(
         totalTimeMilliseconds = 10000f
     )
+    oscillator.updateDisplacement(time/1000)
 
     Box(modifier = Modifier
         .fillMaxSize(),
@@ -214,9 +217,9 @@ fun SingleDOF(
                         modifier = Modifier,
 
                     ) {
-                        Stiffness(oscillator.updateDisplacement(time / 1000).dp + start.dp)
+                        Stiffness(0.dp, 0.dp, start.dp,oscillator.displacements[0].toDp())
                         if (damping != 0.0)
-                            Damper(oscillator.updateDisplacement(time/1000).dp + start.dp)
+                            Damper(oscillator.displacements[0].toDp() + start.dp)
                     }
                     Mass(mass = mass.toDouble(), oscillator.updateDisplacement(time/1000).dp, start.dp)
                 }
@@ -293,17 +296,11 @@ fun MassSpring2DOF(
                     contentAlignment = Alignment.TopCenter
 //                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-
-
-//                    Stiffness(oscillator.updateDisplacement(time / 1000).dp + start.dp)
-                    Stiffness(0.dp, 0.dp, mass1Start, oscillator.displacement.value?.dp ?: 0.dp)
-                    Mass(mass = mass1.toDouble(), oscillator.displacement.value?.dp ?: 0.dp, mass1Start)
-//                    Mass(mass = mass1.toDouble(), 0.dp, 0.dp)
-//                    Stiffness(oscillator.updateDisplacement(time / 1000).dp + start.dp)
-                    Stiffness(mass1Start + (10.dp * mass1.toFloat() + 60.dp), oscillator.displacement.value?.dp ?: 0.dp,mass2Start,oscillator.displacement.value?.dp ?: 0.dp)
-                    Mass(mass = mass2.toDouble(),oscillator.displacement.value?.dp ?: 0.dp, mass2Start)
-//                    Stiffness(oscillator.updateDisplacement(time / 1000).dp + start.dp)
-                    Stiffness(mass2Start + (10.dp * mass2.toFloat() + 60.dp),oscillator.displacement.value?.dp ?: 0.dp, availableHeight, 0.dp)
+                    Stiffness(0.dp, 0.dp, mass1Start, oscillator.displacements[0].toDp())
+                    Mass(mass = mass1.toDouble(), oscillator.displacements[0].toDp() , mass1Start)
+                    Stiffness(mass1Start + (10.dp * mass1.toFloat() + 60.dp), oscillator.displacements[0].toDp(),mass2Start,oscillator.displacements[1].toDp())
+                    Mass(mass = mass2.toDouble(),oscillator.displacements[1].toDp(), mass2Start)
+                    Stiffness(mass2Start + (10.dp * mass2.toFloat() + 60.dp),oscillator.displacements[1].toDp(), availableHeight, 0.dp)
 
                 }
                 Box(

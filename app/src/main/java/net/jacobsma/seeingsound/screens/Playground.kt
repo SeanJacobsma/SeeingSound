@@ -26,8 +26,8 @@ fun Playground(
         Oscillator(
             initialMasses = arrayListOf(EffectiveMass(5.0), EffectiveMass(5.0)),
             initialStiffness = arrayListOf(EffectiveStiffness(3.0), EffectiveStiffness(3.0), EffectiveStiffness(3.0)),
-            initialDamping = arrayListOf(EffectiveDamping(0.0)),
-            initialDisplacement = 75.0
+            initialDamping = arrayListOf(EffectiveDamping(0.0), EffectiveDamping(0.0), EffectiveDamping(0.0)),
+            maxAmplitude = 50.0
         ))}
     MassSpring2DOF(start = start2, dur = dur, oscillator=osc)
 

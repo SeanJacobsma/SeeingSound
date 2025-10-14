@@ -1,5 +1,7 @@
 package net.jacobsma.seeingsound.acoustics.systems
 
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 
@@ -13,5 +15,9 @@ class LiveValueHolder(value: Number) {
 
     fun toDouble() : Double {
         return _mutableVal.value?.toDouble() ?: 0.0
+    }
+
+    fun toDp() : Dp {
+        return _mutableVal.value?.toDouble()?.dp ?: 0.dp
     }
 }

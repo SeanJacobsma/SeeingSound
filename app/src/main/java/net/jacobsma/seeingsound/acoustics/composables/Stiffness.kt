@@ -22,8 +22,3 @@ fun Stiffness(leftMassStart: Dp, leftMassAmp: Dp, rightMassStart:Dp, rightMassAm
 
     )
 }
-
-@Composable
-fun Stiffness(height: Dp) {
-    Box(modifier = Modifier)
-}
