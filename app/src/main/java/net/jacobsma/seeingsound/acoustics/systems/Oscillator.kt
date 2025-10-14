@@ -81,7 +81,7 @@ class Oscillator(
     val modalFrequencies: ArrayList<LiveValueHolder> = ArrayList(List(masses.size) {LiveValueHolder(0.0)})
     val amplitudes: ArrayList<LiveValueHolder> = ArrayList(List(masses.size) { LiveValueHolder(0.0)})
 
-    private val _frequencyIndex: MutableLiveData<Int> = MutableLiveData(1)
+    private val _frequencyIndex: MutableLiveData<Int> = MutableLiveData(0)
     val selectedFrequencyIndex: LiveData<Int> = _frequencyIndex
 
     private val _frequency: MutableLiveData<Double> = MutableLiveData(calcNaturalFreq())
@@ -108,7 +108,13 @@ class Oscillator(
         _frequency.value = calcNaturalFreq()
     }
 
-    private fun getMotionEquationMatrix() : NDArray<Double, D2> {
+    fun onModeChange(newMode: Int?) {
+        _frequencyIndex.value = newMode ?: 0
+        calcAmplitude()
+        _frequency.value = modalFrequencies[_frequencyIndex.value!!].toDouble()
+    }
+
+    private fun getMotionEquationMatrix(omega: Double) : NDArray<Double, D2> {
         val N = masses.size
         val matrix: NDArray<Double, D2> = mk.zeros(N, N)
         for (i in 0 until le.size) {
@@ -165,11 +171,11 @@ class Oscillator(
         return 0.0
     }
 
-    private fun calcDampingRatio(): Double {
-        return if (masses[0].toDouble() == 0.0)
+    private fun calcDampingRatio(index: Int): Double {
+        return if (masses[index].toDouble() == 0.0)
             0.0
         else
-            dampers[0].toDouble() / (2.0 * masses[0].toDouble())
+            dampers[index].toDouble() / (2.0 * masses[index].toDouble())
     }
 
     fun updateDisplacement(timeSeconds: Float) : Double {
@@ -268,6 +274,8 @@ fun MassSpring2DOF(
     val stiffness3: Number by oscillator.stiffnesses[2].value.observeAsState(0.0)
     val damping: Number by oscillator.dampers[0].value.observeAsState(0.0)
 
+    val mode: Int by oscillator.selectedFrequencyIndex.observeAsState(0)
+
     val time:Float by animateTimeAsState(
         totalTimeMilliseconds = 10000f
     )
@@ -347,6 +355,11 @@ fun MassSpring2DOF(
                     onValueChange = { oscillator.onStiffnessChange(it, 2) },
                     label = "Stiffness 3"
                 )
+                NumberPicker(
+                    value = mode,
+                    onValueChange = { oscillator.onModeChange(it) },
+                    label = "Mode"
+                )
             }
         }
     }
@@ -357,6 +370,15 @@ fun NumberPicker(value:Double, onValueChange: (Double?) -> Unit, label:String) {
     OutlinedTextField(
         value = value.toString(),
         onValueChange = { onValueChange(it.toDoubleOrNull())},
+        label = { Text(label) }
+    )
+}
+
+@Composable
+fun NumberPicker(value:Int, onValueChange: (Int?) -> Unit, label:String) {
+    OutlinedTextField(
+        value = value.toString(),
+        onValueChange = { onValueChange(it.toIntOrNull())},
         label = { Text(label) }
     )
 }
