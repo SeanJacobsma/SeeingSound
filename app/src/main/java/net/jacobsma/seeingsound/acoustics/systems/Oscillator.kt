@@ -31,22 +31,24 @@ import net.jacobsma.seeingsound.acoustics.composables.Stiffness
 import net.jacobsma.seeingsound.acoustics.damping.EffectiveDamping
 import net.jacobsma.seeingsound.acoustics.mass.EffectiveMass
 import net.jacobsma.seeingsound.acoustics.rref
-import net.jacobsma.seeingsound.acoustics.squared
 import net.jacobsma.seeingsound.acoustics.stiffness.EffectiveStiffness
 import net.jacobsma.seeingsound.acoustics.toAngularFrequency
 import net.jacobsma.seeingsound.acoustics.toFrequency
+import org.jetbrains.kotlinx.multik.api.identity
+import org.jetbrains.kotlinx.multik.api.linalg.dot
 import org.jetbrains.kotlinx.multik.api.linalg.eigVals
+import org.jetbrains.kotlinx.multik.api.linalg.inv
 import org.jetbrains.kotlinx.multik.api.mk
 import org.jetbrains.kotlinx.multik.api.zeros
 import org.jetbrains.kotlinx.multik.ndarray.data.D2
 import org.jetbrains.kotlinx.multik.ndarray.data.NDArray
 import org.jetbrains.kotlinx.multik.ndarray.data.get
 import org.jetbrains.kotlinx.multik.ndarray.data.set
+import org.jetbrains.kotlinx.multik.ndarray.operations.append
 import org.jetbrains.kotlinx.multik.ndarray.operations.times
-import org.jetbrains.kotlinx.multik.ndarray.operations.toList
+import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.sin
-import kotlin.math.sqrt
 
 class Oscillator(
     initialMasses: ArrayList<EffectiveMass> = arrayListOf<EffectiveMass>(EffectiveMass(1.0)),
@@ -118,24 +120,80 @@ class Oscillator(
         val N = masses.size
         val matrix: NDArray<Double, D2> = mk.zeros(N, N)
         for (i in 0 until le.size) {
-            matrix[i] = le[i].getGeneralMotionEquation(i, N)
+            matrix[i] = le[i].getGeneralMotionEquation(i, N, omega)
         }
         Log.d("TAG", "getMotionEquationMatrix: $matrix")
         return matrix
     }
 
-    private fun calcNaturalFreq() : Double {
-        val matrix = getMotionEquationMatrix()
-        val eigenValues = mk.linalg.eigVals(matrix).toList().reversed()
-        if (modalFrequencies.size != eigenValues.size) {
-            throw RuntimeException("Incorrect number of modal frequencies calculated.")
-        }
-        for (i in 0 until eigenValues.size){
-            modalFrequencies[i].setValue(toFrequency(sqrt(eigenValues[i].re)))
-            Log.d("TAG", "calcNaturalFreq: f_i: ${modalFrequencies[i].toDouble()}")
+    private fun calcModalFrequencies() {
+        val N = masses.size
+        val ident = mk.identity<Double>(N)
+        val zeros: NDArray<Double, D2> = mk.zeros<Double>(N, N)
+
+        val mass: NDArray<Double, D2> = mk.zeros(N, N)
+        val damping: NDArray<Double, D2> = mk.zeros(N, N)
+        val stiffness: NDArray<Double, D2> = mk.zeros(N, N)
+
+        for (i in 0 until le.size) {
+            mass[i] = le[i].getMassArray(i, N)
+            damping[i] = le[i].getDampingArray(i, N)
+            stiffness[i] = le[i].getStiffnessArray(i, N)
         }
 
-        Log.d("TAG", "calculated eigenvalues as: ${eigenValues[0]}")
+        // Linearize the Quadratic Eigenvalue Problem (QEP)
+        // a = [[Z, I];[s, d]]
+        val a: NDArray<Double, D2> = (zeros.append(ident, axis = 1)).append(
+            (stiffness.append(damping, axis = 1)), axis= 0
+        )
+
+        // b = [[I, Z];[Z, m]]
+        val b:NDArray<Double, D2> = (ident.append(zeros, axis = 1)).append(
+            (zeros.append( mass, axis = 1)), axis= 0
+        )
+
+        val bInv: NDArray<Double, D2> = mk.linalg.inv(b)
+
+        // Compute the standard eigenvalue matrix C = B^-1 * A
+        val cMat = mk.linalg.dot(bInv, a)
+
+        // Find the eigenvalues of C
+        val eigenValues = mk.linalg.eigVals(cMat)
+        // We will have double the eigenvalues as modal frequencies, because the QEP produces complex conjugates.
+        if (modalFrequencies.size * 2 != eigenValues.size) {
+            throw RuntimeException("Incorrect number of modal frequencies calculated.")
+        }
+//        Log.d("TAG", "calcModalFrequencies: eigenvalues: $eigenValues")
+        val mfSize = modalFrequencies.size - 1
+        var reducedEigs: ArrayList<Double> = ArrayList()
+
+        for (i in 0 until eigenValues.size) {
+            val absVal = abs(eigenValues[i].re)
+            if (reducedEigs.isEmpty()) {
+                reducedEigs.add(absVal)
+                continue
+            }
+
+            if (reducedEigs.any {
+                abs(it - absVal) <= 1.0E-13 // number is already in reducedEigs
+            }) {
+                continue
+            }
+
+            reducedEigs.add(absVal)
+        }
+        reducedEigs.sort()
+
+        for (i in 0..mfSize ){
+            // The complex conjugates are not important for the modal frequencies because we only care about the real portion.
+//            modalFrequencies[i].setValue(toFrequency(eigenValues[mfSize - i].re))
+            modalFrequencies[i].setValue(toFrequency(reducedEigs[i]))
+//            Log.d("TAG", "calcModalFrequencies: f_$i: ${reducedEigs[i]}")
+        }
+    }
+
+    private fun calcNaturalFreq() : Double {
+        calcModalFrequencies()
         calcAmplitude()
         return modalFrequencies[_frequencyIndex.value!!].toDouble()
 //        return if (masses[0].toDouble() == 0.0)
@@ -144,15 +202,11 @@ class Oscillator(
 //            sqrt((stiffnesses[0].toDouble() / masses[0].toDouble()) - squared(calcDampingRatio()))
     }
 
-    private fun calcAmplitude() : Double {
+    private fun calcAmplitude(){
         val N = masses.size
-        var matrix = getMotionEquationMatrix()
-        for (n in 0 until N) {
-            val omegaSquared = squared(toAngularFrequency( modalFrequencies[_frequencyIndex.value!!].toDouble()))
-            Log.d("TAG", "calcAmplitude w^2: $omegaSquared")
-            matrix[n,n] -= omegaSquared
-        }
         Log.d("TAG", "calcAmplitude: matrix with freq $matrix")
+        val omega = toAngularFrequency( modalFrequencies[_frequencyIndex.value!!].toDouble())
+        var matrix = getMotionEquationMatrix(omega)
 
         val B = matrix[0 until N, 0].deepCopy() * -1.0
         Log.d("TAG", "calcAmplitude: B: ${B[0]}")
@@ -168,7 +222,9 @@ class Oscillator(
 
         val a = rref(C.cat(D))
         Log.d("TAG", "calcAmplitude: $a")
-        return 0.0
+        for (i in 0 until N) {
+            amplitudes[i].setValue(a[i, N])
+        }
     }
 
     private fun calcDampingRatio(index: Int): Double {
