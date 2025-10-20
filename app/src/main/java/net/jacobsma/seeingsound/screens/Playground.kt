@@ -5,11 +5,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import net.jacobsma.seeingsound.acoustics.damping.EffectiveDamping
-import net.jacobsma.seeingsound.acoustics.mass.EffectiveMass
-import net.jacobsma.seeingsound.acoustics.stiffness.EffectiveStiffness
 import net.jacobsma.seeingsound.acoustics.systems.MassSpring2DOF
+import net.jacobsma.seeingsound.acoustics.systems.MassSpringNDOF
 import net.jacobsma.seeingsound.acoustics.systems.Oscillator
+import net.jacobsma.seeingsound.acoustics.systems.SingleDOF
 
 @Composable
 fun Playground(
@@ -18,16 +17,42 @@ fun Playground(
     var dur by remember { mutableStateOf(1000) }
     var start2 by remember { mutableStateOf(200f) }
     var clicked by remember { mutableStateOf(false)}
-//    var osc by remember {mutableStateOf(Oscillator(initialMasses = arrayListOf(EffectiveMass(1.0)), initialDisplacement = -75.0))}
-//    SingleDOF(start = start2, dur = dur, oscillator=osc)
+
+    val mass = 5.0
+    val stiffness = 3.0
+    val damping = 0.0
+    val amplitude = 50.0
+    val floating = false
+
+//    single DOF params
+//    val n = 1
+//    val damping = 1.0
+//    val floating = true
+//    val amplitude = 75.0
+
+//    2 DOF params
+//    val n = 2
+
+//    3 DOF params
+//    val n = 3
+
+//    N DOF params
+    val n = 5
 
     var osc by remember {mutableStateOf(
         Oscillator(
-            initialMasses = arrayListOf(EffectiveMass(5.0), EffectiveMass(5.0)),
-            initialStiffness = arrayListOf(EffectiveStiffness(3.0), EffectiveStiffness(3.0), EffectiveStiffness(3.0)),
-            initialDamping = arrayListOf(EffectiveDamping(0.0), EffectiveDamping(0.0), EffectiveDamping(0.0)),
-            maxAmplitude = 50.0
+            nDOF = n,
+            floatingEnd = floating,
+            baseMass = mass,
+            baseStiffness = stiffness,
+            baseDamping = damping,
+            maxAmplitude = amplitude,
         ))}
-    MassSpring2DOF(start = start2, dur = dur, oscillator=osc)
+//    SingleDOF(start = start2, dur = dur, oscillator=osc)
+
+//    MassSpring2DOF(start = start2, dur = dur, oscillator=osc)
+
+    MassSpringNDOF(start = start2, dur = dur, oscillator = osc, n = n)
+
 
 }

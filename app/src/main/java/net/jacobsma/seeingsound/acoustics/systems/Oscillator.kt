@@ -2,6 +2,7 @@ package net.jacobsma.seeingsound.acoustics.systems
 
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,6 +22,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -57,6 +61,14 @@ class Oscillator(
     val maxAmplitude: Double = 50.0,
     phaseOffset: Double = 0.0,
 ) : ViewModel() {
+
+    constructor(nDOF: Int, floatingEnd: Boolean, baseMass:Double = 1.0, baseStiffness: Double = 1.0, baseDamping:Double = 0.0, maxAmplitude: Double = 50.0, phaseOffset: Double = 0.0 ) : this(
+        initialMasses = List<EffectiveMass>(nDOF) { EffectiveMass(baseMass) } as ArrayList<EffectiveMass>,
+        initialStiffness = List<EffectiveStiffness>(if (floatingEnd) nDOF else (nDOF + 1)) { EffectiveStiffness(baseStiffness) } as ArrayList<EffectiveStiffness>,
+        List<EffectiveDamping>(if (floatingEnd) nDOF else (nDOF + 1)) { EffectiveDamping(baseDamping) } as ArrayList<EffectiveDamping>,
+        maxAmplitude,
+        phaseOffset
+    )
 
     val masses: ArrayList<EffectiveMass> = initialMasses
 
@@ -220,11 +232,13 @@ class Oscillator(
         D[0,0] = 1.0
         D[0,N] = 1.0
 
+//        Log.d("TAG", "calcAmplitude pre rref: ${C.cat(D)}")
+
         val a = rref(C.cat(D))
         for (i in 0 until N) {
             amplitudes[i].setValue(a[i, N])
         }
-//        Log.d("TAG", "calcAmplitude: $a")
+//        Log.d("TAG", "calcAmplitude post rref: $a")
     }
 
     private fun calcDampingRatio(index: Int): Double {
@@ -260,59 +274,50 @@ fun SingleDOF(
     )
     oscillator.updateDisplacement(time/1000)
 
-    Box(modifier = Modifier
-        .fillMaxSize(),
-        contentAlignment = Alignment.TopCenter
+    Row(
+        modifier = Modifier
+            .fillMaxSize(),
+            horizontalArrangement = Arrangement.Center
     ) {
-        Row(
+        Box(
             modifier = Modifier,
+            contentAlignment = Alignment.TopCenter
         ) {
+
+            Row(modifier = Modifier) {
+                Stiffness(0.dp, 0.dp, start.dp,oscillator.displacements[0].toDp())
+                if (damping != 0.0)
+                    Damper(0.dp, 0.dp, start.dp,oscillator.displacements[0].toDp())
+            }
+            Mass(mass = oscillator.masses[0], oscillator.displacements[0].toDp(), start.dp)
+
             Box(
-                modifier = Modifier,
-                contentAlignment = Alignment.TopCenter
-            ) {
-                Column(
-                    modifier = Modifier,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Row(
-                        modifier = Modifier,
+                modifier = Modifier
+                    .width(150.dp)
+                    .height(2.dp)
+                    .offset(y = (start.dp + (10.dp * mass.toFloat() + 60.dp) / 2))
+                    .background(color = Color.Red)
+            )
+        }
 
-                    ) {
-                        Stiffness(0.dp, 0.dp, start.dp,oscillator.displacements[0].toDp())
-                        if (damping != 0.0)
-                            Damper(oscillator.displacements[0].toDp() + start.dp)
-                    }
-                    Mass(mass = mass.toDouble(), oscillator.updateDisplacement(time/1000).dp, start.dp)
-                }
-                Box(
-                    modifier = Modifier
-                        .width(150.dp)
-                        .height(2.dp)
-                        .offset(y = (start.dp + (10.dp * mass.toFloat() + 60.dp) / 2))
-                        .background(color = Color.Red)
-                )
-            }
-
-            Column(modifier = Modifier,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                NumberPicker(
-                    value = mass.toDouble(),
-                    onValueChange = { oscillator.onMassChange(it, 0) },
-                    label = "Mass"
-                )
-                NumberPicker(
-                    value = stiffness.toDouble(),
-                    onValueChange = { oscillator.onStiffnessChange(it, 0) },
-                    label = "Stiffness"
-                )
-                NumberPicker(
-                    value = damping.toDouble(),
-                    onValueChange = { oscillator.onDampingChange(it, 0) },
-                    label = "Damping"
-                )
-            }
+        Column(modifier = Modifier,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            NumberPicker(
+                value = mass.toDouble(),
+                onValueChange = { oscillator.onMassChange(it, 0) },
+                label = "Mass"
+            )
+            NumberPicker(
+                value = stiffness.toDouble(),
+                onValueChange = { oscillator.onStiffnessChange(it, 0) },
+                label = "Stiffness"
+            )
+            NumberPicker(
+                value = damping.toDouble(),
+                onValueChange = { oscillator.onDampingChange(it, 0) },
+                label = "Damping"
+            )
         }
     }
 }
@@ -323,13 +328,6 @@ fun MassSpring2DOF(
     dur: Int = 1000,
     oscillator: Oscillator = Oscillator()
 ) {
-    val mass1: Number by oscillator.masses[0].value.observeAsState(0.0)
-    val mass2: Number by oscillator.masses[1].value.observeAsState(0.0)
-    val stiffness1: Number by oscillator.stiffnesses[0].value.observeAsState(0.0)
-    val stiffness2: Number by oscillator.stiffnesses[1].value.observeAsState(0.0)
-    val stiffness3: Number by oscillator.stiffnesses[2].value.observeAsState(0.0)
-    val damping: Number by oscillator.dampers[0].value.observeAsState(0.0)
-
     val mode: Int by oscillator.selectedFrequencyIndex.observeAsState(0)
 
     val time:Float by animateTimeAsState(
@@ -348,37 +346,34 @@ fun MassSpring2DOF(
                 contentAlignment = Alignment.TopCenter
             ) {
                 val availableHeight = maxHeight
-                val springHeight = (availableHeight - (10.dp * mass1.toFloat() + 60.dp) - (10.dp * mass2.toFloat() + 60.dp)) /3
-//                val mass1Start = availableHeight/3 - (10.dp * mass1.toFloat() + 60.dp) /2
+                val springHeight = (availableHeight - (10.dp * oscillator.masses[0].toFloat() + 60.dp) - (10.dp * oscillator.masses[1].toFloat() + 60.dp)) /3
                 val mass1Start = springHeight
-//                val mass2Start = availableHeight*2/3 - (10.dp * mass2.toFloat() + 60.dp) /2
-                val mass2Start = springHeight*2 + (10.dp * mass1.toFloat() + 60.dp)
+                val mass2Start = springHeight*2 + (10.dp * oscillator.masses[0].toFloat() + 60.dp)
 
                 Box(
                     modifier = Modifier
                         .fillMaxHeight(),
                     contentAlignment = Alignment.TopCenter
-//                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Stiffness(0.dp, 0.dp, mass1Start, oscillator.displacements[0].toDp())
-                    Mass(mass = mass1.toDouble(), oscillator.displacements[0].toDp() , mass1Start)
-                    Stiffness(mass1Start + (10.dp * mass1.toFloat() + 60.dp), oscillator.displacements[0].toDp(),mass2Start,oscillator.displacements[1].toDp())
-                    Mass(mass = mass2.toDouble(),oscillator.displacements[1].toDp(), mass2Start)
-                    Stiffness(mass2Start + (10.dp * mass2.toFloat() + 60.dp),oscillator.displacements[1].toDp(), availableHeight, 0.dp)
+                    Mass(mass = oscillator.masses[0], oscillator.displacements[0].toDp() , mass1Start)
+                    Stiffness(mass1Start + (10.dp * oscillator.masses[0].toFloat() + 60.dp), oscillator.displacements[0].toDp(),mass2Start,oscillator.displacements[1].toDp())
+                    Mass(mass = oscillator.masses[1],oscillator.displacements[1].toDp(), mass2Start)
+                    Stiffness(mass2Start + (10.dp * oscillator.masses[1].toFloat() + 60.dp),oscillator.displacements[1].toDp(), availableHeight, 0.dp)
 
                 }
                 Box(
                     modifier = Modifier
                         .width(150.dp)
                         .height(2.dp)
-                        .offset(y = (mass1Start + (10.dp * mass1.toFloat() + 60.dp) / 2))
+                        .offset(y = (mass1Start + (10.dp * oscillator.masses[0].toFloat() + 60.dp) / 2))
                         .background(color = Color.Red)
                 )
                 Box(
                     modifier = Modifier
                         .width(150.dp)
                         .height(2.dp)
-                        .offset(y = (mass2Start + (10.dp * mass2.toFloat() + 60.dp) / 2))
+                        .offset(y = (mass2Start + (10.dp * oscillator.masses[1].toFloat() + 60.dp) / 2))
                         .background(color = Color.Red)
                 )
             }
@@ -387,30 +382,134 @@ fun MassSpring2DOF(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 NumberPicker(
-                    value = stiffness1.toDouble(),
+                    value = oscillator.stiffnesses[0].toDouble(),
                     onValueChange = { oscillator.onStiffnessChange(it, 0) },
                     label = "Stiffness 1"
                 )
                 NumberPicker(
-                    value = mass1.toDouble(),
+                    value = oscillator.masses[0].toDouble(),
                     onValueChange = { oscillator.onMassChange(it, 0) },
                     label = "Mass 1"
                 )
                 NumberPicker(
-                    value = stiffness2.toDouble(),
+                    value = oscillator.stiffnesses[1].toDouble(),
                     onValueChange = { oscillator.onStiffnessChange(it, 1) },
                     label = "Stiffness 2"
                 )
                 NumberPicker(
-                    value = mass2.toDouble(),
+                    value = oscillator.masses[1].toDouble(),
                     onValueChange = { oscillator.onMassChange(it, 1) },
                     label = "Mass 2"
                 )
                 NumberPicker(
-                    value = stiffness3.toDouble(),
+                    value = oscillator.stiffnesses[2].toDouble(),
                     onValueChange = { oscillator.onStiffnessChange(it, 2) },
                     label = "Stiffness 3"
                 )
+                NumberPicker(
+                    value = mode,
+                    onValueChange = { oscillator.onModeChange(it) },
+                    label = "Mode"
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun MassSpringNDOF(
+    start: Float = 200f,
+    dur: Int = 1000,
+    n: Int,
+    oscillator: Oscillator = Oscillator(nDOF = n, floatingEnd=false)
+) {
+    val mode: Int by oscillator.selectedFrequencyIndex.observeAsState(0)
+
+    val time:Float by animateTimeAsState(
+        totalTimeMilliseconds = 10000f
+    )
+    oscillator.updateDisplacement(time / 1000)
+
+    Box(modifier = Modifier
+        .fillMaxSize(),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        Row(
+            modifier = Modifier,
+        ) {
+            BoxWithConstraints(modifier = Modifier,
+                contentAlignment = Alignment.TopCenter
+            ) {
+                val availableHeight = maxHeight
+                var springHeight = availableHeight
+                for (mass in oscillator.masses) {
+                    springHeight -= (10.dp * mass.toFloat() + 60.dp)
+                }
+                springHeight /= n + 1
+
+                val massStarts: ArrayList<Dp> = ArrayList()
+                for (i in 1..oscillator.masses.size) {
+                    var start = springHeight*i
+                    for (m in 1 until i) {
+                        start += (10.dp * oscillator.masses[m].toFloat() + 60.dp)
+                    }
+                    massStarts.add(start)
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight(),
+                    contentAlignment = Alignment.TopCenter
+//                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    for (i in 0 until oscillator.masses.size){
+                        Stiffness(
+                            if (i - 1 < 0) 0.dp else massStarts[i - 1] + (10.dp * oscillator.masses[i - 1].toFloat() + 60.dp),
+                            if (i - 1 < 0) 0.dp else oscillator.displacements[i - 1].toDp(),
+                            massStarts[i],
+                            oscillator.displacements[i].toDp()
+                        )
+                        Mass(mass = oscillator.masses[i], oscillator.displacements[i].toDp() , massStarts[i])
+                    }
+                    if (oscillator.masses.size != oscillator.stiffnesses.size) {
+                        Stiffness(massStarts[n-1] + (10.dp * oscillator.masses[n-1].toFloat() + 60.dp),oscillator.displacements[n-1].toDp(), availableHeight, 0.dp)
+                    }
+                }
+                for (i in 0 until oscillator.masses.size) {
+                    Box(
+                        modifier = Modifier
+                            .width(150.dp)
+                            .height(2.dp)
+                            .offset(y = (massStarts[i] + (10.dp * oscillator.masses[i].toFloat() + 60.dp) / 2))
+                            .background(color = Color.Red)
+                    )
+                }
+            }
+
+            Column(modifier = Modifier
+                .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                for (i in 0 until oscillator.masses.size) {
+                    NumberPicker(
+                        value = oscillator.stiffnesses[i].toDouble(),
+                        onValueChange = { oscillator.onStiffnessChange(it, i) },
+                        label = "Stiffness ${i+1}"
+                    )
+                    NumberPicker(
+                        value = oscillator.masses[i].toDouble(),
+                        onValueChange = { oscillator.onMassChange(it, i) },
+                        label = "Mass ${i+1}"
+                    )
+                }
+                if (oscillator.stiffnesses.size > oscillator.masses.size) {
+                    val i = oscillator.stiffnesses.size - 1
+                    NumberPicker(
+                        value = oscillator.stiffnesses[i].toDouble(),
+                        onValueChange = { oscillator.onStiffnessChange(it, i) },
+                        label = "Stiffness ${i+1}"
+                    )
+                }
                 NumberPicker(
                     value = mode,
                     onValueChange = { oscillator.onModeChange(it) },
