@@ -27,7 +27,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import net.jacobsma.seeingsound.acoustics.addColumn
 import net.jacobsma.seeingsound.acoustics.animate.animateTimeAsState
 import net.jacobsma.seeingsound.acoustics.composables.Damper
 import net.jacobsma.seeingsound.acoustics.composables.Mass
@@ -44,14 +43,15 @@ import org.jetbrains.kotlinx.multik.api.linalg.eigVals
 import org.jetbrains.kotlinx.multik.api.linalg.inv
 import org.jetbrains.kotlinx.multik.api.mk
 import org.jetbrains.kotlinx.multik.api.zeros
+import org.jetbrains.kotlinx.multik.ndarray.complex.ComplexDouble
 import org.jetbrains.kotlinx.multik.ndarray.data.D2
 import org.jetbrains.kotlinx.multik.ndarray.data.NDArray
 import org.jetbrains.kotlinx.multik.ndarray.data.get
 import org.jetbrains.kotlinx.multik.ndarray.data.set
 import org.jetbrains.kotlinx.multik.ndarray.operations.append
-import org.jetbrains.kotlinx.multik.ndarray.operations.times
 import kotlin.math.abs
 import kotlin.math.exp
+import kotlin.math.max
 import kotlin.math.sin
 
 class Oscillator(
@@ -128,11 +128,11 @@ class Oscillator(
         _frequency.value = modalFrequencies[_frequencyIndex.value!!].toDouble()
     }
 
-    private fun getMotionEquationMatrix(omega: Double) : NDArray<Double, D2> {
+    private fun getModalMotionMatrix(omega: Double) : NDArray<Double, D2> {
         val N = masses.size
         val matrix: NDArray<Double, D2> = mk.zeros(N, N)
         for (i in 0 until le.size) {
-            matrix[i] = le[i].getGeneralMotionEquation(i, N, omega)
+            matrix[i] = le[i].getModalMotionEquation(i, N, omega)
         }
         Log.d("TAG", "getMotionEquationMatrix: $matrix")
         return matrix
@@ -140,12 +140,12 @@ class Oscillator(
 
     private fun calcModalFrequencies() {
         val N = masses.size
-        val ident = mk.identity<Double>(N)
-        val zeros: NDArray<Double, D2> = mk.zeros<Double>(N, N)
+        val ident = mk.identity<ComplexDouble>(N)
+        val zeros: NDArray<ComplexDouble, D2> = mk.zeros(N, N)
 
-        val mass: NDArray<Double, D2> = mk.zeros(N, N)
-        val damping: NDArray<Double, D2> = mk.zeros(N, N)
-        val stiffness: NDArray<Double, D2> = mk.zeros(N, N)
+        val mass: NDArray<ComplexDouble, D2> = mk.zeros(N, N)
+        val damping: NDArray<ComplexDouble, D2> = mk.zeros(N, N)
+        val stiffness: NDArray<ComplexDouble, D2> = mk.zeros(N, N)
 
         for (i in 0 until le.size) {
             mass[i] = le[i].getMassArray(i, N)
@@ -155,16 +155,16 @@ class Oscillator(
 
         // Linearize the Quadratic Eigenvalue Problem (QEP)
         // a = [[Z, I];[s, d]]
-        val a: NDArray<Double, D2> = (zeros.append(ident, axis = 1)).append(
+        val a: NDArray<ComplexDouble, D2> = (zeros.append(ident, axis = 1)).append(
             (stiffness.append(damping, axis = 1)), axis= 0
         )
 
         // b = [[I, Z];[Z, m]]
-        val b:NDArray<Double, D2> = (ident.append(zeros, axis = 1)).append(
+        val b:NDArray<ComplexDouble, D2> = (ident.append(zeros, axis = 1)).append(
             (zeros.append( mass, axis = 1)), axis= 0
         )
 
-        val bInv: NDArray<Double, D2> = mk.linalg.inv(b)
+        val bInv: NDArray<ComplexDouble, D2> = mk.linalg.inv(b)
 
         // Compute the standard eigenvalue matrix C = B^-1 * A
         val cMat = mk.linalg.dot(bInv, a)
@@ -217,26 +217,19 @@ class Oscillator(
     private fun calcAmplitude(){
         val N = masses.size
         val omega = toAngularFrequency( modalFrequencies[_frequencyIndex.value!!].toDouble())
-        var matrix = getMotionEquationMatrix(omega)
+        var matrix = getModalMotionMatrix(omega)
 //        Log.d("TAG", "calcAmplitude: matrix with freq $matrix")
 
-        val B = matrix[0 until N, 0].deepCopy() * -1.0
-//        Log.d("TAG", "calcAmplitude: B: $B")
+//        Log.d("TAG", "calcAmplitude pre rref: ${matrix}")
+        val a = rref(matrix)
+        a[N-1, N-1] = -1.0 //everything is relative to the last masses amplitude
+        var max = 0.0
         for (i in 0 until N) {
-            matrix[i,0] = 0.0
+            max = max(abs(a[i, N-1]), max)
         }
-//        Log.d("TAG", "calcAmplitude: matrix:$matrix")
-        val C = addColumn(matrix, B)
-        var D: NDArray<Double, D2> = mk.zeros(1,N+1)
-//        Log.d("TAG", "calcAmplitude: $D")
-        D[0,0] = 1.0
-        D[0,N] = 1.0
 
-//        Log.d("TAG", "calcAmplitude pre rref: ${C.cat(D)}")
-
-        val a = rref(C.cat(D))
         for (i in 0 until N) {
-            amplitudes[i].setValue(a[i, N])
+            amplitudes[i].setValue(-1* a[i, N-1] / max)
         }
 //        Log.d("TAG", "calcAmplitude post rref: $a")
     }
