@@ -76,7 +76,8 @@ fun UI() {
                 .align(Alignment.CenterHorizontally)
         ) {
             composable(items[0]) {
-                Home()
+//                Home()
+                Playground()
                 startTheAnimation = 0f
             }
             composable(items[1]) {
@@ -93,36 +94,36 @@ fun UI() {
                 startTheAnimation = 1f
             }
         }
-        NavigationBar(
-            modifier = Modifier,
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer) {
-            items.forEachIndexed { index, item ->
-                NavigationBarItem(
-                    icon = {
-                        Icon(
-                            painter = painterResource(id = icons[index]),
-                            contentDescription = item
-                        )
-                    },
-                    label = { Text(item) },
-                    selected = selectedItem == index,
-                    onClick = {
-                        selectedItem = index
-                        navController.navigate(items[index])
-                    },
-                    colors = NavigationBarItemColors(
-                        selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        selectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        selectedIndicatorColor = MaterialTheme.colorScheme.inversePrimary,
-                        unselectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        unselectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        disabledIconColor = MaterialTheme.colorScheme.surfaceVariant,
-                        disabledTextColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                )
-            }
-        }
+//        NavigationBar(
+//            modifier = Modifier,
+//            containerColor = MaterialTheme.colorScheme.primaryContainer,
+//            contentColor = MaterialTheme.colorScheme.onPrimaryContainer) {
+//            items.forEachIndexed { index, item ->
+//                NavigationBarItem(
+//                    icon = {
+//                        Icon(
+//                            painter = painterResource(id = icons[index]),
+//                            contentDescription = item
+//                        )
+//                    },
+//                    label = { Text(item) },
+//                    selected = selectedItem == index,
+//                    onClick = {
+//                        selectedItem = index
+//                        navController.navigate(items[index])
+//                    },
+//                    colors = NavigationBarItemColors(
+//                        selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+//                        selectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
+//                        selectedIndicatorColor = MaterialTheme.colorScheme.inversePrimary,
+//                        unselectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+//                        unselectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
+//                        disabledIconColor = MaterialTheme.colorScheme.surfaceVariant,
+//                        disabledTextColor = MaterialTheme.colorScheme.surfaceVariant
+//                    )
+//                )
+//            }
+//        }
     }
 
 

@@ -18,10 +18,13 @@ fun Playground(
     var start2 by remember { mutableStateOf(200f) }
     var clicked by remember { mutableStateOf(false)}
 
-    val mass = 5.0
-    val stiffness = 3.0
-    val damping = 0.0
-    val amplitude = 50.0
+//    val mass = 5.0
+    val mass = 1.0
+//    val stiffness = 300.0
+    val stiffness = 60.0
+    val damping = 0.03
+//    val amplitude = 50.0
+    val amplitude = 30.0
     val floating = false
 
 //    single DOF params
@@ -37,7 +40,7 @@ fun Playground(
 //    val n = 3
 
 //    N DOF params
-    val n = 5
+    val n = 4
 
     var osc by remember {mutableStateOf(
         Oscillator(
