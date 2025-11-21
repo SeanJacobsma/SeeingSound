@@ -26,7 +26,7 @@ fun <T : Number> rref(matrix: D2Array<T>): D2Array<T> {
                 maxRow = i
             }
         }
-//        Log.d("TAG", "rref initial pivot:[$pivotRow,$j], Matrix:$result")
+//        Log.d("TAG", "rref initial pivot:[$pivotRow,$j], Matrix:\n$result")
 
         if (result[maxRow, j].toDouble() == 0.0) continue
 
@@ -35,7 +35,7 @@ fun <T : Number> rref(matrix: D2Array<T>): D2Array<T> {
             val tempRow = result[maxRow].copy()
             result[maxRow] = result[pivotRow]
             result[pivotRow] = tempRow
-//            Log.d("TAG", "rref swap pivot:[$pivotRow,$j], Matrix:$result")
+//            Log.d("TAG", "rref swap pivot:[$pivotRow,$j], Matrix:\n$result")
         }
 
         // Scale pivot row
@@ -45,20 +45,24 @@ fun <T : Number> rref(matrix: D2Array<T>): D2Array<T> {
                 result[pivotRow, k] = (result[pivotRow, k].toDouble() / pivotValue) as T
             }
         } else {
+//            Log.d("TAG", "rref: clear floating point err")
             result[pivotRow, j] = 0.0 as T // Clear floating point error
         }
-//        Log.d("TAG", "rref scaled pivot:[$pivotRow,$j], Matrix:$result")
+//        Log.d("TAG", "rref scaled pivot:[$pivotRow,$j], Matrix:\n$result")
+
+        if (j == nCols-1) continue //Skip clearing the last rows, because that is what we need for displacements
 
         // Eliminate other rows
         for (i in 0 until nRows) {
             if (i != pivotRow) {
                 val factor = result[i, j].toDouble()
+//                Log.d("TAG", "rref reduced row $i: factor=$factor ")
                 for (k in j until nCols) {
                     result[i, k] = (result[i, k].toDouble() - factor * result[pivotRow, k].toDouble()) as T
                 }
             }
         }
-//        Log.d("TAG", "rref reduced pivot:[$pivotRow,$j], Matrix:$result")
+//        Log.d("TAG", "rref reduced pivot:[$pivotRow,$j], Matrix:\n$result")
         pivotRow++
         if (pivotRow == nRows) break
     }
