@@ -18,4 +18,8 @@ open class EffectiveDamping(damping: Number) {
     fun toDouble() : Double {
         return _mutableVal.value?.toDouble() ?: 0.0
     }
+
+    override fun toString() : String {
+        return "%.1f".format(toDouble())
+    }
 }

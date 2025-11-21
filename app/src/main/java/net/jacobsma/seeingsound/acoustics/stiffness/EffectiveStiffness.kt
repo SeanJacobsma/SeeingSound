@@ -18,4 +18,8 @@ open class EffectiveStiffness(stiffness: Number) {
     fun toDouble() : Double {
         return _mutableVal.value?.toDouble() ?: 0.0
     }
+
+    override fun toString() : String {
+        return "%.3f".format(toDouble())
+    }
 }

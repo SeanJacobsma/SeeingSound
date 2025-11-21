@@ -23,4 +23,8 @@ open class EffectiveMass(mass: Number){
     fun toFloat() : Float {
         return _mutableVal.value?.toFloat() ?: 0f
     }
+
+    override fun toString() : String {
+        return "%.3f".format(toDouble())
+    }
 }
