@@ -87,4 +87,7 @@ class LumpedElement(
         }
     }
 
+    override fun toString() : String {
+        return "(s:${leftStiffness?.toDouble()} d: ${leftDamping?.toDouble()} m:${mass.toDouble()} d:${rightDamping?.toDouble()} s:${rightStiffness?.toDouble()})"
+    }
 }

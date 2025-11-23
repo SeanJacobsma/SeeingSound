@@ -1,5 +1,7 @@
 package net.jacobsma.seeingsound.acoustics.mass
 
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 
@@ -22,6 +24,10 @@ open class EffectiveMass(mass: Number){
 
     fun toFloat() : Float {
         return _mutableVal.value?.toFloat() ?: 0f
+    }
+
+    fun toDp() : Dp {
+        return 10.dp * toFloat() + 60.dp
     }
 
     override fun toString() : String {

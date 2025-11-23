@@ -379,9 +379,9 @@ fun MassSpring2DOF(
                 contentAlignment = Alignment.TopCenter
             ) {
                 val availableHeight = maxHeight
-                val springHeight = (availableHeight - (10.dp * oscillator.masses[0].toFloat() + 60.dp) - (10.dp * oscillator.masses[1].toFloat() + 60.dp)) /3
+                val springHeight = (availableHeight - oscillator.masses[0].toDp() - oscillator.masses[1].toDp()) /3
                 val mass1Start = springHeight
-                val mass2Start = springHeight*2 + (10.dp * oscillator.masses[0].toFloat() + 60.dp)
+                val mass2Start = springHeight*2 + oscillator.masses[0].toDp()
 
                 Box(
                     modifier = Modifier
@@ -390,23 +390,23 @@ fun MassSpring2DOF(
                 ) {
                     Stiffness(oscillator.stiffnesses[0], 0.dp, 0.dp, mass1Start, oscillator.displacements[0].toDp())
                     Mass(mass = oscillator.masses[0], oscillator.displacements[0].toDp() , mass1Start)
-                    Stiffness(oscillator.stiffnesses[1], mass1Start + (10.dp * oscillator.masses[0].toFloat() + 60.dp), oscillator.displacements[0].toDp(),mass2Start,oscillator.displacements[1].toDp())
+                    Stiffness(oscillator.stiffnesses[1], mass1Start + oscillator.masses[0].toDp(), oscillator.displacements[0].toDp(),mass2Start,oscillator.displacements[1].toDp())
                     Mass(mass = oscillator.masses[1],oscillator.displacements[1].toDp(), mass2Start)
-                    Stiffness(oscillator.stiffnesses[2], mass2Start + (10.dp * oscillator.masses[1].toFloat() + 60.dp),oscillator.displacements[1].toDp(), availableHeight, 0.dp)
+                    Stiffness(oscillator.stiffnesses[2], mass2Start + oscillator.masses[1].toDp(),oscillator.displacements[1].toDp(), availableHeight, 0.dp)
 
                 }
                 Box(
                     modifier = Modifier
                         .width(150.dp)
                         .height(2.dp)
-                        .offset(y = (mass1Start + (10.dp * oscillator.masses[0].toFloat() + 60.dp) / 2))
+                        .offset(y = (mass1Start + oscillator.masses[0].toDp() / 2))
                         .background(color = Color.Red)
                 )
                 Box(
                     modifier = Modifier
                         .width(150.dp)
                         .height(2.dp)
-                        .offset(y = (mass2Start + (10.dp * oscillator.masses[1].toFloat() + 60.dp) / 2))
+                        .offset(y = (mass2Start + oscillator.masses[1].toDp() / 2))
                         .background(color = Color.Red)
                 )
             }
@@ -481,7 +481,7 @@ fun MassSpringNDOF(
                 val availableHeight = maxHeight
                 var springHeight = availableHeight
                 for (mass in oscillator.masses) {
-                    springHeight -= (10.dp * mass.toFloat() + 60.dp)
+                    springHeight -= mass.toDp()
                 }
                 springHeight /= n + 1
 
@@ -489,7 +489,7 @@ fun MassSpringNDOF(
                 for (i in 1..oscillator.masses.size) {
                     var start = springHeight*i
                     for (m in 0 until i-1) {
-                        start += (10.dp * oscillator.masses[m].toFloat() + 60.dp)
+                        start += oscillator.masses[m].toDp()
                     }
                     massStarts.add(start)
                 }
@@ -504,7 +504,7 @@ fun MassSpringNDOF(
                         Row(modifier=Modifier) {
                             Stiffness(
                                 oscillator.stiffnesses[i],
-                                if (i - 1 < 0) 0.dp else massStarts[i - 1] + (10.dp * oscillator.masses[i - 1].toFloat() + 60.dp),
+                                if (i - 1 < 0) 0.dp else massStarts[i - 1] + oscillator.masses[i - 1].toDp(),
                                 if (i - 1 < 0) 0.dp else oscillator.displacements[i - 1].toDp(),
                                 massStarts[i],
                                 oscillator.displacements[i].toDp()
@@ -512,7 +512,7 @@ fun MassSpringNDOF(
                             if (oscillator.dampers[i].toDouble() != 0.0) {
                                 Damper(
                                     oscillator.dampers[i],
-                                    if (i - 1 < 0) 0.dp else massStarts[i - 1] + (10.dp * oscillator.masses[i - 1].toFloat() + 60.dp),
+                                    if (i - 1 < 0) 0.dp else massStarts[i - 1] + oscillator.masses[i - 1].toDp(),
                                     if (i - 1 < 0) 0.dp else oscillator.displacements[i - 1].toDp(),
                                     massStarts[i],
                                     oscillator.displacements[i].toDp()
@@ -544,8 +544,8 @@ fun MassSpringNDOF(
                 for (i in 0 until oscillator.masses.size) {
                     Row (
                         modifier = Modifier
-                            .width(100.dp)
-                            .offset(y = (massStarts[i] + (10.dp * oscillator.masses[i].toFloat() + 60.dp) / 2))
+                            .width(oscillator.masses[i].toDp() + 30.dp)
+                            .offset(y = (massStarts[i] + oscillator.masses[i].toDp() / 2))
                                 ,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -554,7 +554,7 @@ fun MassSpringNDOF(
 //                                .width(150.dp)
                                 .width(10.dp)
                                 .height(2.dp)
-//                                .offset(y = (massStarts[i] + (10.dp * oscillator.masses[i].toFloat() + 60.dp) / 2))
+//                                .offset(y = (massStarts[i] + oscillator.masses[i].toDp() / 2))
                                 .background(color = MaterialTheme.colorScheme.onBackground)
                         )
 //                        Spacer(modifier = Modifier.weight(1f))
@@ -562,7 +562,7 @@ fun MassSpringNDOF(
                             modifier = Modifier
                                 .width(10.dp)
                                 .height(2.dp)
-//                                .offset(y = (massStarts[i] + (10.dp * oscillator.masses[i].toFloat() + 60.dp) / 2))
+//                                .offset(y = (massStarts[i] + oscillator.masses[i].toDp() / 2))
                                 .background(color = MaterialTheme.colorScheme.onBackground)
                         )
                     }
@@ -625,7 +625,7 @@ fun MassSpringNDOFMenu(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Enable Proportional Damping",
+                text = "Damping",
                 color = MaterialTheme.colorScheme.onBackground
             )
             Checkbox(
