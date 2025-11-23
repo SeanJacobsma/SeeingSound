@@ -93,26 +93,18 @@ class Oscillator(
     private val _dampingEnabled: MutableLiveData<Boolean> = MutableLiveData(proportionalDamping != 0.0)
     val dampingEnabled: LiveData<Boolean> = _dampingEnabled
 
-    val le: ArrayList<LumpedElement> = ArrayList(List(masses.size) {LumpedElement(leftStiffness = null, mass = EffectiveMass(0),  rightStiffness = null)})
+    private val _N: MutableLiveData<Int> = MutableLiveData(masses.size)
+    val N: LiveData<Int> = _N
+
+    var le: ArrayList<LumpedElement> = ArrayList(List(_N.value ?: 1) {LumpedElement(leftStiffness = null, mass = EffectiveMass(0),  rightStiffness = null)})
     init {
-        for (n in 0 until le.size) {
-            when (n) {
-                le.size - 1 -> {
-                    if (stiffnesses.size == masses.size + 1 ) {
-                        le[n] = LumpedElement(leftStiffness = stiffnesses[n], leftDamping = dampers[n], mass = masses[n], rightStiffness = stiffnesses[n + 1], rightDamping = dampers[n + 1])
-                    } else {
-                        le[n] = LumpedElement(leftStiffness = stiffnesses[n], leftDamping = dampers[n], mass = masses[n], rightStiffness = null, rightDamping = null)
-                    }
-                }
-                else -> le[n] = LumpedElement(leftStiffness = stiffnesses[n], leftDamping = dampers[n], mass = masses[n], rightStiffness = stiffnesses[n + 1], rightDamping = dampers[n + 1])
-            }
-        }
+        buildLumpedElements()
         Log.d("TAG", ": $le")
     }
 
-    val modalFrequencies: ArrayList<LiveValueHolder> = ArrayList(List(masses.size) {LiveValueHolder(0.0)})
-    val modalDampingRatios: ArrayList<LiveValueHolder> = ArrayList(List(masses.size) {LiveValueHolder(0.0)})
-    val amplitudes: ArrayList<LiveValueHolder> = ArrayList(List(masses.size) { LiveValueHolder(0.0)})
+    val modalFrequencies: ArrayList<LiveValueHolder> = ArrayList(List(_N.value ?: 1) {LiveValueHolder(0.0)})
+    val modalDampingRatios: ArrayList<LiveValueHolder> = ArrayList(List(_N.value ?: 1) {LiveValueHolder(0.0)})
+    val amplitudes: ArrayList<LiveValueHolder> = ArrayList(List(_N.value ?: 1) { LiveValueHolder(0.0)})
 
     private val _frequencyIndex: MutableLiveData<Int> = MutableLiveData(0)
     val selectedFrequencyIndex: LiveData<Int> = _frequencyIndex
@@ -121,10 +113,31 @@ class Oscillator(
     val frequency: LiveData<Double> = _frequency
 
     private val _displacement: MutableLiveData<Double> = MutableLiveData(maxAmplitude)
-    val displacements: ArrayList<LiveValueHolder> = ArrayList(List(masses.size) {LiveValueHolder(0.0)})
+    val displacements: ArrayList<LiveValueHolder> = ArrayList(List(_N.value ?: 1) {LiveValueHolder(0.0)})
 
     private val _phase: MutableLiveData<Double> = MutableLiveData(phaseOffset)
     val phase: LiveData<Double> = _phase
+
+    private var _updatesEnabled: Boolean = true
+
+    private fun buildLumpedElements() {
+        le.clear()
+        for (n in 0 until (_N.value ?: 1)) {
+            val newLe: LumpedElement = when (n) {
+                (_N.value ?: 1) - 1 -> {
+                    if (_finalStiffnessEnabled.value == true) {
+                        LumpedElement(leftStiffness = stiffnesses[n], leftDamping = dampers[n], mass = masses[n], rightStiffness = stiffnesses[n + 1], rightDamping = dampers[n + 1])
+                    } else {
+                        LumpedElement(leftStiffness = stiffnesses[n], leftDamping = dampers[n], mass = masses[n], rightStiffness = null, rightDamping = null)
+                    }
+                }
+
+                else -> LumpedElement(leftStiffness = stiffnesses[n], leftDamping = dampers[n], mass = masses[n], rightStiffness = stiffnesses[n + 1], rightDamping = dampers[n + 1])
+            }
+            le.add(newLe)
+        }
+        Log.d("TAG", "buildLumpedElements: $le")
+    }
 
     fun onMassChange(newMass: Double?, index: Int = 0){
         masses[index].setMass(newMass ?: 0.0)
@@ -173,7 +186,10 @@ class Oscillator(
     }
 
     private fun calcModalFrequencies() {
-        val N = masses.size
+        if (!_updatesEnabled) {
+            return
+        }
+        val N = (N.value ?: 1)
         val ident = mk.identity<ComplexDouble>(N)
         val zeros: NDArray<ComplexDouble, D2> = mk.zeros(N, N)
 
@@ -198,6 +214,7 @@ class Oscillator(
             (zeros.append( mass, axis = 1)), axis= 0
         )
 
+        //Log.d("TAG", "calcModalFrequencies: $b")
         val bInv: NDArray<ComplexDouble, D2> = mk.linalg.inv(b)
 
         // Compute the standard eigenvalue matrix C = B^-1 * A
@@ -243,8 +260,10 @@ class Oscillator(
     }
 
     private fun calcNaturalFreq() : Double {
-        calcModalFrequencies()
-        calcAmplitude()
+        if (_updatesEnabled) {
+            calcModalFrequencies()
+            calcAmplitude()
+        }
         return modalFrequencies[_frequencyIndex.value!!].toDouble()
 //        return if (masses[0].toDouble() == 0.0)
 //            0.0
@@ -253,6 +272,9 @@ class Oscillator(
     }
 
     private fun calcAmplitude(){
+        if (!_updatesEnabled) {
+            return
+        }
         val N = masses.size
         val omega = toAngularFrequency( modalFrequencies[_frequencyIndex.value!!].toDouble())
         var matrix = getModalMotionMatrix(omega)
@@ -290,6 +312,43 @@ class Oscillator(
         return displacements[0].toDouble()
     }
 
+    fun changeDOF(N: Int?) {
+        if (N == null) {
+            return
+        }
+        Log.d("TAG", "changeDOF: $N")
+        _updatesEnabled = false
+        while (N != masses.size) {
+            if (N > masses.size) {
+                stiffnesses.add(EffectiveStiffness(stiffnesses.last().toDouble()))
+                dampers.add(EffectiveDamping(dampers.last().toDouble()))
+                masses.add(EffectiveMass(1.0))
+                modalFrequencies.add(LiveValueHolder(0.0))
+                modalDampingRatios.add(LiveValueHolder(0.0))
+                amplitudes.add(LiveValueHolder(0.0))
+                displacements.add(LiveValueHolder(0.0))
+            } else {
+                stiffnesses.removeAt(stiffnesses.size - 1)
+                dampers.removeAt(dampers.size - 1)
+                masses.removeAt(masses.size - 1)
+                modalFrequencies.removeAt(masses.size - 1)
+                modalDampingRatios.removeAt(masses.size - 1)
+                amplitudes.removeAt(masses.size - 1)
+                displacements.removeAt(masses.size - 1)
+            }
+        }
+        _N.value = N
+        _frequencyIndex.value?.let {
+            if (it > N) {
+                _frequencyIndex.value = 0
+            }
+        }
+        buildLumpedElements()
+
+
+        _updatesEnabled = true
+        _frequency.value = calcNaturalFreq()
+    }
 }
 
 @Composable
@@ -478,12 +537,13 @@ fun MassSpringNDOF(
                 .fillMaxWidth(0.3f),
                 contentAlignment = Alignment.TopCenter
             ) {
+                val N = oscillator.N.value ?: 1
                 val availableHeight = maxHeight
                 var springHeight = availableHeight
                 for (mass in oscillator.masses) {
                     springHeight -= mass.toDp()
                 }
-                springHeight /= n + 1
+                springHeight /= N + 1
 
                 val massStarts: ArrayList<Dp> = ArrayList()
                 for (i in 1..oscillator.masses.size) {
@@ -500,7 +560,7 @@ fun MassSpringNDOF(
                     contentAlignment = Alignment.TopCenter
 //                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    for (i in 0 until oscillator.masses.size){
+                    for (i in 0 until N){
                         Row(modifier=Modifier) {
                             Stiffness(
                                 oscillator.stiffnesses[i],
@@ -524,24 +584,24 @@ fun MassSpringNDOF(
                     if (oscillator.masses.size != oscillator.stiffnesses.size) {
                         Row(modifier=Modifier) {
                             Stiffness(
-                                oscillator.stiffnesses[n],
-                                massStarts[n - 1] + (10.dp * oscillator.masses[n - 1].toFloat() + 60.dp),
-                                oscillator.displacements[n - 1].toDp(),
+                                oscillator.stiffnesses[N],
+                                massStarts[N - 1] + oscillator.masses[N - 1].toDp(),
+                                oscillator.displacements[N - 1].toDp(),
                                 availableHeight,
                                 0.dp
                             )
-                            if (oscillator.dampers[n].toDouble() != 0.0)
+                            if (oscillator.dampers[N].toDouble() != 0.0)
                                 Damper(
-                                    oscillator.dampers[n],
-                                    massStarts[n - 1] + (10.dp * oscillator.masses[n - 1].toFloat() + 60.dp),
-                                    oscillator.displacements[n - 1].toDp(),
+                                    oscillator.dampers[N],
+                                    massStarts[N - 1] + oscillator.masses[N - 1].toDp(),
+                                    oscillator.displacements[N - 1].toDp(),
                                     availableHeight,
                                     0.dp
                                 )
                         }
                     }
                 }
-                for (i in 0 until oscillator.masses.size) {
+                for (i in 0 until N) {
                     Row (
                         modifier = Modifier
                             .width(oscillator.masses[i].toDp() + 30.dp)
@@ -621,6 +681,13 @@ fun MassSpringNDOFMenu(
             }
         }
 
+        val N by oscillator.N.observeAsState()
+        NumberPicker(
+            value = N ?: 1,
+            onValueChange = { oscillator.changeDOF(it) },
+            label = "Degrees Of Freedom"
+        )
+
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -672,22 +739,23 @@ fun MassSpringNDOFMenu(
         }
 
 
-
-        for (i in 0 until oscillator.masses.size) {
-            val stiffness by oscillator.stiffnesses[i].value.observeAsState()
-            NumberPicker(
-                value = stiffness?.toDouble() ?: 0.0,
-                onValueChange = { oscillator.onStiffnessChange(it, i) },
-                label = "Stiffness ${i + 1}"
-            )
-            val mass by oscillator.masses[i].value.observeAsState()
-            NumberPicker(
-                value = mass?.toDouble() ?: 0.0,
-                onValueChange = { oscillator.onMassChange(it, i) },
-                label = "Mass ${i + 1}"
-            )
+        N?.let { N ->
+            for (i in 0 until N) {
+                val stiffness by oscillator.stiffnesses[i].value.observeAsState()
+                NumberPicker(
+                    value = stiffness?.toDouble() ?: 0.0,
+                    onValueChange = { oscillator.onStiffnessChange(it, i) },
+                    label = "Stiffness ${i + 1}"
+                )
+                val mass by oscillator.masses[i].value.observeAsState()
+                NumberPicker(
+                    value = mass?.toDouble() ?: 0.0,
+                    onValueChange = { oscillator.onMassChange(it, i) },
+                    label = "Mass ${i + 1}"
+                )
+            }
         }
-        if (oscillator.stiffnesses.size > oscillator.masses.size) {
+        if (floatingEnd) {
             val i = oscillator.stiffnesses.size - 1
             val stiffness by oscillator.stiffnesses[i].value.observeAsState()
             NumberPicker(
