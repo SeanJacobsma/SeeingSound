@@ -60,9 +60,9 @@ import org.jetbrains.kotlinx.multik.ndarray.data.get
 import org.jetbrains.kotlinx.multik.ndarray.data.set
 import org.jetbrains.kotlinx.multik.ndarray.operations.append
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.max
-import kotlin.math.sin
 
 class Oscillator(
     initialMasses: ArrayList<EffectiveMass> = arrayListOf<EffectiveMass>(EffectiveMass(1.0)),
@@ -284,7 +284,7 @@ class Oscillator(
     fun updateDisplacement(timeSeconds: Float) : Double {
         for(i in 0 until displacements.size) {
             val amplitude: Double = maxAmplitude * amplitudes[i].toDouble() * exp(-1*calcDampingRatio(_frequencyIndex.value!!)*timeSeconds)
-            displacements[i].setValue(amplitude * sin(toAngularFrequency(_frequency.value!!) * timeSeconds +_phase.value!!))
+            displacements[i].setValue(amplitude * cos(toAngularFrequency(_frequency.value!!) * timeSeconds +_phase.value!!))
 //        Log.d("TAG", "$timeSeconds updateDisplacement: disp: ${_displacement.value}, init disp: $initialDisplacement, freq: ${_frequency.value}")
         }
         return displacements[0].toDouble()
