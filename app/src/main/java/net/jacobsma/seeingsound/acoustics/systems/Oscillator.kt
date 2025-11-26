@@ -73,6 +73,7 @@ class Oscillator(
     proportionalDamping: Double = 0.0,
     val maxAmplitude: Double = 50.0,
     phaseOffset: Double = 0.0,
+    initialTime:Float = 0f,
 ) : ViewModel() {
 
     constructor(nDOF: Int, floatingEnd: Boolean, baseMass:Double = 1.0, baseStiffness: Double = 1.0, baseDamping:Double = 0.0, maxAmplitude: Double = 50.0, phaseOffset: Double = 0.0 ) : this(
@@ -80,7 +81,8 @@ class Oscillator(
         initialStiffness = List<EffectiveStiffness>(if (floatingEnd) nDOF else (nDOF + 1)) { EffectiveStiffness(baseStiffness) } as ArrayList<EffectiveStiffness>,
         proportionalDamping= baseDamping,
         maxAmplitude,
-        phaseOffset
+        phaseOffset,
+        0f
     )
 
     val masses: ArrayList<EffectiveMass> = initialMasses
@@ -550,15 +552,12 @@ fun MassSpring2DOF(
 @Composable
 fun MassSpringNDOF(
     start: Float = 200f,
-    dur: Int = 1000,
+    time: Float = 0f,
     n: Int,
     oscillator: Oscillator = Oscillator(nDOF = n, floatingEnd=false)
 ) {
 
 
-    val time:Float by animateTimeAsState(
-        totalTimeMilliseconds = 10000f
-    )
 //    val time:Float = 0f
     oscillator.updateDisplacement(time / 1000)
 

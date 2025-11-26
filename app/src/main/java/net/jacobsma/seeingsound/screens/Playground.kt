@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import net.jacobsma.seeingsound.acoustics.animate.animateTimeAsState
 import net.jacobsma.seeingsound.acoustics.systems.MassSpring2DOF
 import net.jacobsma.seeingsound.acoustics.systems.MassSpringNDOF
 import net.jacobsma.seeingsound.acoustics.systems.Oscillator
@@ -51,11 +52,14 @@ fun Playground(
             baseDamping = damping,
             maxAmplitude = amplitude,
         ))}
+    val time:Float by animateTimeAsState(
+        totalTimeMilliseconds = 10000f
+    )
 //    SingleDOF(start = start2, dur = dur, oscillator=osc)
 
 //    MassSpring2DOF(start = start2, dur = dur, oscillator=osc)
 
-    MassSpringNDOF(start = start2, dur = dur, oscillator = osc, n = n)
+    MassSpringNDOF(start = start2, time = time, oscillator = osc, n = n)
 
 
 }
