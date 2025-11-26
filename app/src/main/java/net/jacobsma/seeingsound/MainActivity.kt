@@ -205,5 +205,31 @@ fun DefaultPreview() {
     }
 }
 
+@Preview(showBackground=true)
+@Composable
+fun ThreeDOF() {
+    var osc by remember {mutableStateOf(
+        Oscillator(
+            initialMasses = arrayListOf(
+                EffectiveMass(1.0),
+                EffectiveMass(3.0),
+                EffectiveMass(1.0)),
+            initialStiffness = arrayListOf(
+                EffectiveStiffness(60.0),
+                EffectiveStiffness(60.0),
+                EffectiveStiffness(60.0)
+            ),
+            proportionalDamping= 0.05,
+            maxAmplitude = 30.0,
+            phaseOffset = 0.0,
+            initialTime = 100f
+    ))}
+
+    AcousticDemoComposeTheme {
+        MassSpringNDOF(start = 200f, time = 100f, oscillator = osc, n = 3)
+    }
+}
+
+
 
 
