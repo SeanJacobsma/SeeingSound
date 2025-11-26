@@ -1,6 +1,7 @@
 package net.jacobsma.seeingsound.acoustics.systems
 
 import android.util.Log
+import androidx.annotation.IntRange
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +23,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderColors
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -96,6 +99,9 @@ class Oscillator(
     private val _N: MutableLiveData<Int> = MutableLiveData(masses.size)
     val N: LiveData<Int> = _N
 
+    private val _finalStiffnessEnabled: MutableLiveData<Boolean> = MutableLiveData(stiffnesses.size == masses.size + 1)
+    val finalStiffnessEnabled: LiveData<Boolean> = _finalStiffnessEnabled
+
     var le: ArrayList<LumpedElement> = ArrayList(List(_N.value ?: 1) {LumpedElement(leftStiffness = null, mass = EffectiveMass(0),  rightStiffness = null)})
     init {
         buildLumpedElements()
@@ -119,6 +125,12 @@ class Oscillator(
     val phase: LiveData<Double> = _phase
 
     private var _updatesEnabled: Boolean = true
+    private var _finalStiffnessStorage: Double = stiffnesses.last().toDouble()
+
+    init {
+        buildLumpedElements()
+        updateDisplacement(initialTime)
+    }
 
     private fun buildLumpedElements() {
         le.clear()
@@ -141,11 +153,28 @@ class Oscillator(
 
     fun onMassChange(newMass: Double?, index: Int = 0){
         masses[index].setMass(newMass ?: 0.0)
+        le[index].mass = masses[index]
         _frequency.value = calcNaturalFreq()
     }
 
     fun onStiffnessChange(newStiffness: Double?, index: Int = 0) {
         stiffnesses[index].setStiffness(newStiffness ?: 0.0)
+        if (_dampingEnabled.value == true) {
+            dampers[index].setDamping(
+                _proportionalDamping.value?.times(stiffnesses[index].toDouble()) ?: 0.0
+            )
+        }
+
+        if (index != le.size) {
+            le[index].leftStiffness = stiffnesses[index]
+            le[index].leftDamping = dampers[index]
+        }
+
+        if (index != 0) {
+            le[index - 1].rightStiffness = stiffnesses[index]
+            le[index - 1].rightDamping = dampers[index]
+        }
+
         _frequency.value = calcNaturalFreq()
     }
 
@@ -158,6 +187,16 @@ class Oscillator(
     fun toggleDamping(enabled: Boolean) {
         _dampingEnabled.value = enabled
         dampingChange()
+    }
+
+    fun toggleFinalStiffness(enabled: Boolean) {
+        _finalStiffnessEnabled.value = enabled
+        if (enabled) {
+            onStiffnessChange(_finalStiffnessStorage, stiffnesses.lastIndex)
+        } else {
+            _finalStiffnessStorage = stiffnesses.last().toDouble()
+            onStiffnessChange(0.0, stiffnesses.lastIndex)
+        }
     }
 
     private fun dampingChange() {
@@ -581,7 +620,7 @@ fun MassSpringNDOF(
                         }
                         Mass(mass = oscillator.masses[i], oscillator.displacements[i].toDp() , massStarts[i])
                     }
-                    if (oscillator.masses.size != oscillator.stiffnesses.size) {
+                    if (oscillator.finalStiffnessEnabled.value == true) {
                         Row(modifier=Modifier) {
                             Stiffness(
                                 oscillator.stiffnesses[N],
@@ -646,6 +685,7 @@ fun MassSpringNDOFMenu(
 ) {
     val mode: Int by oscillator.selectedFrequencyIndex.observeAsState(0)
     val dampingEnabled: Boolean by oscillator.dampingEnabled.observeAsState(false)
+    val floatingEnd: Boolean by oscillator.finalStiffnessEnabled.observeAsState(false)
     var modeMenuExpanded by remember { mutableStateOf(false)}
 
 
