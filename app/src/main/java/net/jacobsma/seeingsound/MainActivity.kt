@@ -39,6 +39,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import net.jacobsma.seeingsound.acoustics.animate.animateSineAsState
+import net.jacobsma.seeingsound.acoustics.mass.EffectiveMass
+import net.jacobsma.seeingsound.acoustics.stiffness.EffectiveStiffness
+import net.jacobsma.seeingsound.acoustics.systems.MassSpringNDOF
+import net.jacobsma.seeingsound.acoustics.systems.Oscillator
 import net.jacobsma.seeingsound.screens.Explore
 import net.jacobsma.seeingsound.ui.theme.AcousticDemoComposeTheme
 import net.jacobsma.seeingsound.screens.Learn
