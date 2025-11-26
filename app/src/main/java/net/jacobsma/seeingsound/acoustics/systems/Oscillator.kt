@@ -727,45 +727,26 @@ fun MassSpringNDOFMenu(
             label = "Degrees Of Freedom"
         )
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Damping",
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Checkbox(
-                checked = dampingEnabled,
-                onCheckedChange = { isChecked ->
-                    oscillator.toggleDamping(isChecked)
-                }
-            )
-        }
+        LabeledCheckBox(
+            text = "Damping",
+            textColor = MaterialTheme.colorScheme.onBackground,
+            checked = dampingEnabled,
+            onCheckedChanged = { isChecked ->
+                oscillator.toggleDamping(isChecked)
+            }
+        )
 
         if (dampingEnabled) {
             val propotionalDamping by oscillator.proportionalDamping.observeAsState()
-            Slider(
+            LabeledSlider(
+                text = "Proportional Damping: ${"%.3f".format(propotionalDamping ?: 0.0)}",
                 value = (propotionalDamping?.toFloat() ?: 0f),
                 valueRange = 0f..0.05f,
                 onValueChange = { oscillator.onProportionalDampingChange(it.toDouble()) },
-//                colors = SliderDefaults.colors(
-//                    thumbColor = MaterialTheme.colorScheme.secondary,
-//                    activeTrackColor = MaterialTheme.colorScheme.secondary,
-//                    inactiveTrackColor = MaterialTheme.colorScheme.secondaryContainer,
-//                ),
                 steps = 0,
                 modifier = Modifier
                     .fillMaxWidth()
             )
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Proportional Damping: ${"%.3f".format(propotionalDamping ?: 0.0)}",
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-            }
 
             Row(
                 verticalAlignment = Alignment.CenterVertically
@@ -777,30 +758,55 @@ fun MassSpringNDOFMenu(
             }
         }
 
+        LabeledCheckBox(
+            text = "Floating End",
+            textColor = MaterialTheme.colorScheme.onBackground,
+            checked = !floatingEnd,
+            onCheckedChanged = { isChecked ->
+                oscillator.toggleFinalStiffness(!isChecked)
+            }
+        )
 
         N?.let { N ->
             for (i in 0 until N) {
                 val stiffness by oscillator.stiffnesses[i].value.observeAsState()
-                NumberPicker(
-                    value = stiffness?.toDouble() ?: 0.0,
-                    onValueChange = { oscillator.onStiffnessChange(it, i) },
-                    label = "Stiffness ${i + 1}"
+                LabeledSlider(
+                    text = "Stiffness ${i + 1}",
+                    value = stiffness?.toFloat() ?: 0f,
+                    valueRange = 6f..600f,
+                    onValueChange = { oscillator.onStiffnessChange(it.toDouble(), i) },
+                    steps = 10,
+                    modifier = Modifier
+                        .fillMaxWidth()
                 )
                 val mass by oscillator.masses[i].value.observeAsState()
-                NumberPicker(
-                    value = mass?.toDouble() ?: 0.0,
-                    onValueChange = { oscillator.onMassChange(it, i) },
-                    label = "Mass ${i + 1}"
+                LabeledSlider(
+                    text = "Mass ${i + 1}",
+                    value = mass?.toFloat() ?: 0f,
+                    valueRange = 1f..3f,
+                    onValueChange = { oscillator.onMassChange(it.toDouble(), i) },
+                    steps = 9,
+                    colors = SliderDefaults.colors(
+                        thumbColor = MaterialTheme.colorScheme.secondary,
+                        activeTrackColor = MaterialTheme.colorScheme.secondary,
+                        inactiveTrackColor = MaterialTheme.colorScheme.secondaryContainer,
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
                 )
             }
         }
         if (floatingEnd) {
             val i = oscillator.stiffnesses.size - 1
             val stiffness by oscillator.stiffnesses[i].value.observeAsState()
-            NumberPicker(
-                value = stiffness?.toDouble() ?: 0.0,
-                onValueChange = { oscillator.onStiffnessChange(it, i) },
-                label = "Stiffness ${i + 1}"
+            LabeledSlider(
+                text = "Stiffness ${i + 1}",
+                value = stiffness?.toFloat() ?: 0f,
+                valueRange = 6f..600f,
+                onValueChange = { oscillator.onStiffnessChange(it.toDouble(), i) },
+                steps = 10,
+                modifier = Modifier
+                    .fillMaxWidth()
             )
         }
     }
@@ -824,3 +830,53 @@ fun NumberPicker(value:Int, onValueChange: (Int?) -> Unit, label:String) {
     )
 }
 
+@Composable
+fun LabeledSlider(
+    text: String,
+    value:Float,
+    modifier: Modifier = Modifier,
+    textColor: Color = MaterialTheme.colorScheme.onBackground,
+    valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
+    onValueChange: (Float) -> Unit,
+    colors: SliderColors = SliderDefaults.colors(),
+    @IntRange steps: Int = 0,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = text,
+            color = textColor
+        )
+    }
+
+    Slider(
+        value = value,
+        valueRange = valueRange,
+        onValueChange = onValueChange,
+        colors = colors,
+        steps = steps,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun LabeledCheckBox(
+    text:String,
+    textColor:Color=Color.Unspecified,
+    checked:Boolean,
+    onCheckedChanged: ((Boolean) -> Unit)?
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = text,
+            color = textColor
+        )
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onCheckedChanged
+        )
+    }
+}
