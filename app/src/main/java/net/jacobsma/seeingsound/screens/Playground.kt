@@ -20,13 +20,15 @@ fun Playground(
     var clicked by remember { mutableStateOf(false)}
 
 //    val mass = 5.0
-    val mass = 1.0
+    val mass = 3.0
 //    val stiffness = 300.0
-    val stiffness = 60.0
-    val damping = 0.03
+//    val stiffness = 60.0
+    val stiffness = 3.0 * 4 * Math.PI * Math.PI
+//    val damping = 0.03
+    val damping = 0.0
 //    val amplitude = 50.0
-    val amplitude = 30.0
-    val floating = false
+    val amplitude = 70.0
+    val floating = true
 
 //    single DOF params
 //    val n = 1
@@ -41,8 +43,9 @@ fun Playground(
 //    val n = 3
 
 //    N DOF params
-    val n = 4
+    val n = 1
 
+    val time = 1000f
     var osc by remember {mutableStateOf(
         Oscillator(
             nDOF = n,
@@ -51,10 +54,13 @@ fun Playground(
             baseStiffness = stiffness,
             baseDamping = damping,
             maxAmplitude = amplitude,
+            initialTime = time,
+            initialModeIndex = 0
         ))}
-    val time:Float by animateTimeAsState(
-        totalTimeMilliseconds = 10000f
-    )
+//    val time:Float by animateTimeAsState(
+//        totalTimeMilliseconds = 10000f
+//    )
+//    val time = 200f
 //    SingleDOF(start = start2, dur = dur, oscillator=osc)
 
 //    MassSpring2DOF(start = start2, dur = dur, oscillator=osc)

@@ -74,15 +74,27 @@ class Oscillator(
     val maxAmplitude: Double = 50.0,
     phaseOffset: Double = 0.0,
     initialTime:Float = 0f,
+    initialModeIndex:Int = 0
 ) : ViewModel() {
 
-    constructor(nDOF: Int, floatingEnd: Boolean, baseMass:Double = 1.0, baseStiffness: Double = 1.0, baseDamping:Double = 0.0, maxAmplitude: Double = 50.0, phaseOffset: Double = 0.0 ) : this(
+    constructor(
+        nDOF: Int,
+        floatingEnd: Boolean,
+        baseMass:Double = 1.0,
+        baseStiffness: Double = 1.0,
+        baseDamping:Double = 0.0,
+        maxAmplitude: Double = 50.0,
+        phaseOffset: Double = 0.0,
+        initialTime:Float = 0f,
+        initialModeIndex: Int = 0
+    ) : this(
         initialMasses = List<EffectiveMass>(nDOF) { EffectiveMass(baseMass) } as ArrayList<EffectiveMass>,
         initialStiffness = List<EffectiveStiffness>(if (floatingEnd) nDOF else (nDOF + 1)) { EffectiveStiffness(baseStiffness) } as ArrayList<EffectiveStiffness>,
         proportionalDamping= baseDamping,
-        maxAmplitude,
-        phaseOffset,
-        0f
+        maxAmplitude = maxAmplitude,
+        phaseOffset = phaseOffset,
+        initialTime = initialTime,
+        initialModeIndex = initialModeIndex
     )
 
     val masses: ArrayList<EffectiveMass> = initialMasses
@@ -105,16 +117,12 @@ class Oscillator(
     val finalStiffnessEnabled: LiveData<Boolean> = _finalStiffnessEnabled
 
     var le: ArrayList<LumpedElement> = ArrayList(List(_N.value ?: 1) {LumpedElement(leftStiffness = null, mass = EffectiveMass(0),  rightStiffness = null)})
-    init {
-        buildLumpedElements()
-        Log.d("TAG", ": $le")
-    }
 
     val modalFrequencies: ArrayList<LiveValueHolder> = ArrayList(List(_N.value ?: 1) {LiveValueHolder(0.0)})
     val modalDampingRatios: ArrayList<LiveValueHolder> = ArrayList(List(_N.value ?: 1) {LiveValueHolder(0.0)})
     val amplitudes: ArrayList<LiveValueHolder> = ArrayList(List(_N.value ?: 1) { LiveValueHolder(0.0)})
 
-    private val _frequencyIndex: MutableLiveData<Int> = MutableLiveData(0)
+    private val _frequencyIndex: MutableLiveData<Int> = MutableLiveData(initialModeIndex)
     val selectedFrequencyIndex: LiveData<Int> = _frequencyIndex
 
     private val _frequency: MutableLiveData<Double> = MutableLiveData(calcNaturalFreq())
@@ -131,7 +139,9 @@ class Oscillator(
 
     init {
         buildLumpedElements()
-        updateDisplacement(initialTime)
+        _frequency.value = calcNaturalFreq()
+        updateDisplacement(initialTime/1000)
+        Log.d("TAG", "initialized Oscillator: ${_frequency.value}")
     }
 
     private fun buildLumpedElements() {
@@ -345,10 +355,11 @@ class Oscillator(
     }
 
     fun updateDisplacement(timeSeconds: Float) : Double {
+        calcAmplitude()
         for(i in 0 until displacements.size) {
             val amplitude: Double = maxAmplitude * amplitudes[i].toDouble() * exp(-1*calcDampingRatio(_frequencyIndex.value!!)*timeSeconds)
             displacements[i].setValue(amplitude * cos(toAngularFrequency(_frequency.value!!) * timeSeconds +_phase.value!!))
-//        Log.d("TAG", "$timeSeconds updateDisplacement: disp: ${_displacement.value}, init disp: $initialDisplacement, freq: ${_frequency.value}")
+//        Log.d("TAG", "updateDisplacement: disp: ${displacements[0].toDouble()}, time: $timeSeconds, freq: ${_frequency.value}")
         }
         return displacements[0].toDouble()
     }
@@ -667,7 +678,7 @@ fun MassSpringNDOF(
                 }
             }
 
-            MassSpringNDOFMenu(n, oscillator)
+//            MassSpringNDOFMenu(n, oscillator)
         }
 
         Text(
@@ -684,7 +695,7 @@ fun MassSpringNDOFMenu(
 ) {
     val mode: Int by oscillator.selectedFrequencyIndex.observeAsState(0)
     val dampingEnabled: Boolean by oscillator.dampingEnabled.observeAsState(false)
-    val floatingEnd: Boolean by oscillator.finalStiffnessEnabled.observeAsState(false)
+    val floatingEnd: Boolean by oscillator.finalStiffnessEnabled.observeAsState(!oscillator.finalStiffnessEnabled.value!!)
     var modeMenuExpanded by remember { mutableStateOf(false)}
 
 
