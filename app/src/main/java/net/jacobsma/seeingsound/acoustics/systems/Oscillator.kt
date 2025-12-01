@@ -204,6 +204,12 @@ class Oscillator(
     fun toggleFinalStiffness(enabled: Boolean) {
         _finalStiffnessEnabled.value = enabled
         if (enabled) {
+            if (stiffnesses.size == masses.size) {
+                stiffnesses.add(EffectiveStiffness(_finalStiffnessStorage))
+                dampers.add(EffectiveDamping(0.0))
+                le.last().rightStiffness = stiffnesses.last()
+                le.last().rightDamping = dampers.last()
+            }
             onStiffnessChange(_finalStiffnessStorage, stiffnesses.lastIndex)
         } else {
             _finalStiffnessStorage = stiffnesses.last().toDouble()
