@@ -45,7 +45,7 @@ fun Playground(
 //    N DOF params
     val n = 1
 
-    val time = 1000f
+//    val time = 1000f
     var osc by remember {mutableStateOf(
         Oscillator(
             nDOF = n,
@@ -54,12 +54,12 @@ fun Playground(
             baseStiffness = stiffness,
             baseDamping = damping,
             maxAmplitude = amplitude,
-            initialTime = time,
+//            initialTime = time,
             initialModeIndex = 0
         ))}
-//    val time:Float by animateTimeAsState(
-//        totalTimeMilliseconds = 10000f
-//    )
+    val time:Float by animateTimeAsState(
+        totalTimeMilliseconds = 10000f
+    )
 //    val time = 200f
 //    SingleDOF(start = start2, dur = dur, oscillator=osc)
 

@@ -678,7 +678,7 @@ fun MassSpringNDOF(
                 }
             }
 
-//            MassSpringNDOFMenu(n, oscillator)
+            MassSpringNDOFMenu(n, oscillator)
         }
 
         Text(
