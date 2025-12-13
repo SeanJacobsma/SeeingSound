@@ -287,6 +287,7 @@ class Oscillator(
         val mfSize = modalFrequencies.size - 1
         var reducedEigs: ArrayList<ComplexDouble> = ArrayList()
 
+        // This whole section probably is no longer needed, just want to make sure I don't grab the negative frequencies...
         for (i in 0 until eigenValues.size) {
             val absVal = ComplexDouble(abs(eigenValues[i].re), abs(eigenValues[i].im))
             if (reducedEigs.isEmpty()) {
@@ -295,14 +296,15 @@ class Oscillator(
             }
 
             if (reducedEigs.any {
-                abs(it.re - absVal.re) <= 1.0E-13 // number is already in reducedEigs
+                (abs(it.re) - absVal.re) <= 1.0E-13  && (abs(it.im) - absVal.im) <= 1.0E-13// number is already in reducedEigs
             }) {
                 continue
             }
 
             reducedEigs.add(absVal)
         }
-        reducedEigs.sortWith(Comparator{ cd1, cd2 -> cd1.re.compareTo(cd2.re)})
+        reducedEigs.reverse()
+//        reducedEigs.sortWith(Comparator{ cd1, cd2 -> cd1.re.compareTo(cd2.re)}) // this doesn't work when damping gets too high
         Log.d("TAG", "calcModalFrequencies: size mf: ${modalFrequencies.size} size reduced eig: ${reducedEigs.size}")
         while (reducedEigs.size < modalFrequencies.size) {
             reducedEigs.add(ComplexDouble(0.0))
