@@ -14,12 +14,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
@@ -35,11 +40,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import net.jacobsma.seeingsound.R
 import net.jacobsma.seeingsound.acoustics.animate.animateTimeAsState
 import net.jacobsma.seeingsound.acoustics.composables.Damper
 import net.jacobsma.seeingsound.acoustics.composables.Mass
@@ -372,11 +379,23 @@ class Oscillator(
         return displacements[0].toDouble()
     }
 
+    fun incrementDOF() {
+        changeDOF(masses.size + 1)
+    }
+
+    fun decrementDOF() {
+        if (masses.size > 1) {
+            changeDOF(masses.size - 1)
+        } else {
+            throw IndexOutOfBoundsException("There are too few masses to decrement")
+        }
+    }
+
     fun changeDOF(N: Int?) {
         if (N == null) {
             return
         }
-        Log.d("TAG", "changeDOF: $N")
+//        Log.d("TAG", "changeDOF: ${masses.size} -> $N")
         _updatesEnabled = false
         while (N != masses.size) {
             if (N > masses.size) {
@@ -399,7 +418,7 @@ class Oscillator(
         }
         _N.value = N
         _frequencyIndex.value?.let {
-            if (it > N) {
+            if (it >= N) {
                 _frequencyIndex.value = 0
             }
         }
@@ -710,41 +729,134 @@ fun MassSpringNDOFMenu(
     Column(modifier = Modifier
         .verticalScroll(rememberScrollState())
         .fillMaxWidth(0.7f),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
         Row(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.clickable {
-                modeMenuExpanded = true
-            }
+            modifier = Modifier
+                .clickable {
+                    modeMenuExpanded = true
+                }
+                .padding(
+                    top = 16.dp,
+                    bottom = 16.dp
+                )
         ) {
-            Text(text = "Mode ${mode + 1} (${"%.3f".format(oscillator.modalFrequencies[mode].toDouble())} Hz)", color = MaterialTheme.colorScheme.onBackground)
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "Mode ${mode + 1} (${"%.3f".format(oscillator.modalFrequencies[mode].toDouble())} Hz)",
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Icon(
+                    painter = painterResource(
+                        id =
+                            if (modeMenuExpanded) {
+                                R.drawable.baseline_arrow_drop_up_24
+                            } else {
+                                R.drawable.baseline_arrow_drop_down_24
+                            }
+                    ),
+                    contentDescription = "Mode expansion drop down",
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier
+                )
+            }
 //                    Image(
 //                        painter = painterResource(id = R.drawable.drop_down_ic),
 //                        contentDescription = "DropDown Icon"
 //                    )
-        }
-        DropdownMenu(
-            expanded = modeMenuExpanded,
-            onDismissRequest = { modeMenuExpanded = false }
-        ) {
-            oscillator.modalFrequencies.forEachIndexed { index, freq ->
-                DropdownMenuItem(
-                    text = { Text("Mode ${index + 1} (${"%.3f".format(freq.toDouble())} Hz)", color = MaterialTheme.colorScheme.onBackground) },
-                    onClick = {
-                        oscillator.onModeChange(index)
-                    }
-                )
+            DropdownMenu(
+                expanded = modeMenuExpanded,
+                onDismissRequest = { modeMenuExpanded = false }
+            ) {
+                oscillator.modalFrequencies.forEachIndexed { index, freq ->
+                    DropdownMenuItem(
+                        text = { Text("Mode ${index + 1} (${"%.3f".format(freq.toDouble())} Hz)", color = MaterialTheme.colorScheme.onBackground) },
+                        onClick = {
+                            oscillator.onModeChange(index)
+                        }
+                    )
+                }
             }
         }
 
         val N by oscillator.N.observeAsState()
-        NumberPicker(
-            value = N ?: 1,
-            onValueChange = { oscillator.changeDOF(it) },
-            label = "Degrees Of Freedom"
-        )
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+        ) {
+            var decrementEnabled by remember { mutableStateOf(false) }
+            // Arrow left clickable
+            IconButton(
+                onClick = {
+//                    try {
+                        oscillator.decrementDOF()
+                        if (N == 1) {
+                            decrementEnabled = false
+                        }
+//                    } catch (e: IndexOutOfBoundsException) {
+//                        Log.d("Oscillator", "MassSpringNDOFMenu: ${e.message}")
+//                    }
+                },
+                enabled = decrementEnabled,
+                colors = IconButtonDefaults.iconButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary, // Color when enabled
+                    disabledContentColor = Color.Gray // Color when disabled
+                ),
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.baseline_arrow_left_24),
+                    contentDescription = "Left Arrow",
+                    modifier = Modifier.fillMaxSize(.85f))
+            }
+
+            NumberPicker(
+                value = N ?: 1,
+                onValueChange = {
+                    oscillator.changeDOF(it)
+                    if (it != null) {
+                        decrementEnabled = it > 1
+                    }
+                },
+//                label = "Degrees Of Freedom",
+                label = "DOF",
+                modifier = Modifier.width(60.dp)
+            )
+            // Arrow right clickable
+            IconButton(
+                onClick = {
+                    try {
+                        oscillator.incrementDOF()
+                        N?.let {
+                            if (it > 1) {
+                                decrementEnabled = true
+                            }
+                        }
+                    } catch (e: IndexOutOfBoundsException) {
+                        Log.d("Oscillator", "MassSpringNDOFMenu: ${e.message}")
+                    }
+                },
+                colors = IconButtonDefaults.iconButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary, // Color when enabled
+                    disabledContentColor = MaterialTheme.colorScheme.scrim // Color when disabled
+                ),
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.baseline_arrow_right_24),
+                    contentDescription = "Right Arrow",
+                    modifier = Modifier.fillMaxSize(.85f)
+                )
+            }
+        }
 
         LabeledCheckBox(
             text = "Damping",
@@ -841,11 +953,31 @@ fun NumberPicker(value:Double, onValueChange: (Double?) -> Unit, label:String) {
 }
 
 @Composable
+fun NumberPicker(value:Double, onValueChange: (Double?) -> Unit, label:String, modifier: Modifier) {
+    OutlinedTextField(
+        value = value.toString(),
+        onValueChange = { onValueChange(it.toDoubleOrNull())},
+        label = { Text(label) },
+        modifier = modifier
+    )
+}
+
+@Composable
 fun NumberPicker(value:Int, onValueChange: (Int?) -> Unit, label:String) {
     OutlinedTextField(
         value = value.toString(),
         onValueChange = { onValueChange(it.toIntOrNull())},
         label = { Text(label) }
+    )
+}
+
+@Composable
+fun NumberPicker(value:Int, onValueChange: (Int?) -> Unit, label:String, modifier: Modifier) {
+    OutlinedTextField(
+        value = value.toString(),
+        onValueChange = { onValueChange(it.toIntOrNull())},
+        label = { Text(label) },
+        modifier = modifier
     )
 }
 
