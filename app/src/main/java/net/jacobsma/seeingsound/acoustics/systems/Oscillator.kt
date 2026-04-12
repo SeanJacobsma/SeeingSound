@@ -141,7 +141,7 @@ class Oscillator(
         buildLumpedElements()
         _frequency.value = calcNaturalFreq()
         updateDisplacement(initialTime/1000)
-        Log.d("TAG", "initialized Oscillator: ${_frequency.value}")
+//        Log.d("TAG", "initialized Oscillator: ${_frequency.value}")
     }
 
     private fun buildLumpedElements() {
@@ -160,7 +160,7 @@ class Oscillator(
             }
             le.add(newLe)
         }
-        Log.d("TAG", "buildLumpedElements: $le")
+//        Log.d("TAG", "buildLumpedElements: $le")
     }
 
     fun onMassChange(newMass: Double?, index: Int = 0){
@@ -191,7 +191,7 @@ class Oscillator(
     }
 
     fun onProportionalDampingChange(newDamping: Double?){
-        Log.d("TAG", "onProportionalDampingChange: $newDamping")
+//        Log.d("TAG", "onProportionalDampingChange: $newDamping")
         _proportionalDamping.value = newDamping ?: 0.0
         dampingChange()
     }
@@ -283,7 +283,7 @@ class Oscillator(
         if (modalFrequencies.size * 2 != eigenValues.size) {
             throw RuntimeException("Incorrect number of modal frequencies calculated.")
         }
-        Log.d("TAG", "calcModalFrequencies: eigenvalues: $eigenValues")
+//        Log.d("TAG", "calcModalFrequencies: eigenvalues: $eigenValues")
         val mfSize = modalFrequencies.size - 1
         var reducedEigs: ArrayList<ComplexDouble> = ArrayList()
 
@@ -305,7 +305,7 @@ class Oscillator(
         }
         reducedEigs.reverse()
 //        reducedEigs.sortWith(Comparator{ cd1, cd2 -> cd1.re.compareTo(cd2.re)}) // this doesn't work when damping gets too high
-        Log.d("TAG", "calcModalFrequencies: size mf: ${modalFrequencies.size} size reduced eig: ${reducedEigs.size}")
+//        Log.d("TAG", "calcModalFrequencies: size mf: ${modalFrequencies.size} size reduced eig: ${reducedEigs.size}")
         while (reducedEigs.size < modalFrequencies.size) {
             reducedEigs.add(ComplexDouble(0.0))
         }
@@ -313,8 +313,8 @@ class Oscillator(
             // The complex conjugates are not important for the modal frequencies because we only care about the real portion.
             modalFrequencies[i].setValue(toFrequency(reducedEigs[i].re))
             modalDampingRatios[i].setValue(reducedEigs[i].im)
-            Log.d("TAG", "calcModalFrequencies: f_$i: ${reducedEigs[i].re}")
-            Log.d("TAG", "calcModalFrequencies: beta_$i: ${reducedEigs[i].im}")
+//            Log.d("TAG", "calcModalFrequencies: f_$i: ${reducedEigs[i].re}")
+//            Log.d("TAG", "calcModalFrequencies: beta_$i: ${reducedEigs[i].im}")
         }
     }
 
@@ -350,7 +350,7 @@ class Oscillator(
         for (i in 0 until N) {
             amplitudes[i].setValue(-1* a[i, N-1] / max)
         }
-        Log.d("TAG", "calcAmplitude post rref: \n$a")
+//        Log.d("TAG", "calcAmplitude post rref: \n$a")
     }
 
     private fun calcDampingRatio(index: Int): Double {

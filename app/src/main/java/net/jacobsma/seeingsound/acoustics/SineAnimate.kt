@@ -91,7 +91,7 @@ fun SineAnimate(
         .drawBehind {
         val height = size.height
         val width = size.width
-        Log.d("TAG", "SineAnimate: w:${width.toInt()} h:${height.toInt()}")
+//        Log.d("TAG", "SineAnimate: w:${width.toInt()} h:${height.toInt()}")
         val points = mutableListOf<Offset>()
         val path = Path()
 
@@ -102,7 +102,7 @@ fun SineAnimate(
 //            val y = (sin(x * (2f * PI /   (width/period)))
 //                    * (height / 2) + (height / 2)).toFloat()
             val point = Offset(x.toFloat(), y)
-            Log.d("TAG", "SineAnimate: point:${point}")
+//            Log.d("TAG", "SineAnimate: point:${point}")
             points.add(point)
             path.lineTo(x.toFloat(), y)
         }

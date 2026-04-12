@@ -188,7 +188,7 @@ fun Dot() {
             .size(25.dp)
             .onGloballyPositioned { coordinates ->
 
-                Log.d("TAG", "UI: ${coordinates.size.width}")
+//                Log.d("TAG", "UI: ${coordinates.size.width}")
             },
         colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
     )
