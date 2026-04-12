@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -76,6 +77,7 @@ fun UI() {
         NavHost(
             navController = navController, startDestination = items[0], modifier = Modifier
                 .fillMaxSize()
+                .systemBarsPadding()
                 .weight(1f)
                 .align(Alignment.CenterHorizontally)
         ) {
