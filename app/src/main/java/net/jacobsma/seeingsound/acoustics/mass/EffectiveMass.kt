@@ -14,6 +14,9 @@ open class EffectiveMass(mass: Number){
     private val _mutableVal : MutableLiveData<Number> = MutableLiveData(mass)
     val value : LiveData<Number> = _mutableVal
 
+    var minSize : Dp = 60.dp
+    var valueWeight : Dp = 10.dp
+
     fun setMass(mass: Number) {
         _mutableVal.value = mass
     }
@@ -27,7 +30,7 @@ open class EffectiveMass(mass: Number){
     }
 
     fun toDp() : Dp {
-        return 10.dp * toFloat() + 60.dp
+        return valueWeight * toFloat() + minSize
     }
 
     override fun toString() : String {
