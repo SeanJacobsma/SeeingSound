@@ -73,12 +73,13 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.max
+import kotlin.math.min
 
 class Oscillator(
     initialMasses: ArrayList<EffectiveMass> = arrayListOf<EffectiveMass>(EffectiveMass(1.0)),
     initialStiffness: ArrayList<EffectiveStiffness> = arrayListOf<EffectiveStiffness>(EffectiveStiffness(1.0)),
     proportionalDamping: Double = 0.0,
-    val maxAmplitude: Double = 50.0,
+    var maxAmplitude: Double = 50.0,
     phaseOffset: Double = 0.0,
     initialTime:Float = 0f,
     initialModeIndex:Int = 0
@@ -105,6 +106,10 @@ class Oscillator(
     )
 
     val masses: ArrayList<EffectiveMass> = initialMasses
+    val maxMassValue = 3f
+    val minMassValue = 1f
+
+    val maxNumMasses = 10
 
     val stiffnesses: ArrayList<EffectiveStiffness> = initialStiffness
     val dampers: ArrayList<EffectiveDamping> = List(stiffnesses.size) {
@@ -391,10 +396,13 @@ class Oscillator(
         }
     }
 
-    fun changeDOF(N: Int?) {
-        if (N == null) {
+    fun changeDOF(n: Int?) {
+        if (n == null) {
             return
         }
+
+        val N = min( n, maxNumMasses)
+
 //        Log.d("TAG", "changeDOF: ${masses.size} -> $N")
         _updatesEnabled = false
         while (N != masses.size) {
@@ -474,6 +482,7 @@ fun MassSpringNDOF(
                     }
                     massStarts.add(start)
                 }
+                oscillator.maxAmplitude = min((springHeight/3).value.toDouble(), (maxHeight/6).value.toDouble())
 
                 Box(
                     modifier = Modifier
@@ -759,7 +768,7 @@ fun MassSpringNDOFMenu(
                 LabeledSlider(
                     text = "Mass ${i + 1}",
                     value = mass?.toFloat() ?: 0f,
-                    valueRange = 1f..3f,
+                    valueRange = oscillator.minMassValue..oscillator.maxMassValue,
                     onValueChange = { oscillator.onMassChange(it.toDouble(), i) },
                     steps = 9,
                     colors = SliderDefaults.colors(
