@@ -534,7 +534,7 @@ fun MassSpringNDOF(
                 for (i in 0 until N) {
                     Row (
                         modifier = Modifier
-                            .width(oscillator.masses[i].toDp() + 30.dp)
+                            .width(oscillator.masses[i].toDp() + 34.dp)
                             .offset(y = (massStarts[i] + oscillator.masses[i].toDp() / 2))
                                 ,
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -722,10 +722,10 @@ fun MassSpringNDOFMenu(
         )
 
         if (dampingEnabled) {
-            val propotionalDamping by oscillator.proportionalDamping.observeAsState()
+            val proportionalDamping by oscillator.proportionalDamping.observeAsState()
             LabeledSlider(
-                text = "Proportional Damping: ${"%.3f".format(propotionalDamping ?: 0.0)}",
-                value = (propotionalDamping?.toFloat() ?: 0f),
+                text = "Proportional Damping: ${"%.3f".format(proportionalDamping ?: 0.0)}",
+                value = (proportionalDamping?.toFloat() ?: 0f),
                 valueRange = 0f..0.05f,
                 onValueChange = { oscillator.onProportionalDampingChange(it.toDouble()) },
                 steps = 0,
