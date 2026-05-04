@@ -6,10 +6,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import net.jacobsma.seeingsound.acoustics.animate.animateTimeAsState
-import net.jacobsma.seeingsound.acoustics.systems.MassSpring2DOF
 import net.jacobsma.seeingsound.acoustics.systems.MassSpringNDOF
 import net.jacobsma.seeingsound.acoustics.systems.Oscillator
-import net.jacobsma.seeingsound.acoustics.systems.SingleDOF
 
 @Composable
 fun Playground(
